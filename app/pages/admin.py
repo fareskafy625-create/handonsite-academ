@@ -206,10 +206,44 @@ elif admin_menu == "👥 إدارة المتدربين (إضافة حسابات)
             else:
                 st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
 
-# 3. قسم إدارة المدربين (عرض، إضافة، وحذف حسابات الأدمن)
+# 3. قسم إدارة المدربين وحسابات الأدمن (مع شاشة إحصائيات سريعة)
 elif admin_menu == "🔑 إدارة المدربين وحسابات الأدمن":
     st.subheader("🔑 إدارة حسابات المدربين (الأدمن)")
-    st.markdown("يمكنك هنا متابعة جميع المدربين المسجلين، إضافة مدرب جديد، أو حذف أي مدرب بسهولة.")
+    st.markdown("متابعة وعرض إحصائيات المدربين والإعلانات، وإضافة أو حذف حسابات الأدمن.")
+    st.divider()
+    
+    # --- شاشة إحصائيات صغيرة (Metrics Cards) ---
+    try:
+        # حساب عدد المدربين
+        total_admins = 0
+        if os.path.exists(admins_db):
+            df_adm_count = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
+            total_admins = len(df_adm_count)
+            
+        # حساب عدد الإعلانات المنشورة
+        total_announcements = 0
+        if os.path.exists(announcements_db):
+            df_ann_count = pd.read_csv(announcements_db, encoding="utf-8-sig", on_bad_lines="skip")
+            total_announcements = len(df_ann_count)
+
+        # حساب عدد المتدربين المسجلين كمعلومة إضافية مفيدة
+        total_trainees = 0
+        if os.path.exists(users_db):
+            df_usr_count = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
+            total_trainees = len(df_usr_count)
+
+        # عرض الكروت بجانب بعضها
+        m_col1, m_col2, m_col3 = st.columns(3)
+        with m_col1:
+            st.metric(label="👨‍🏫 عدد المدربين الحاليين", value=total_admins)
+        with m_col2:
+            st.metric(label="📢 عدد الإعلانات المنشورة", value=total_announcements)
+        with m_col3:
+            st.metric(label="👥 إجمالي المتدربين بالسيستم", value=total_trainees)
+            
+    except Exception as e:
+        st.caption(f"ملاحظة حول الإحصائيات: {e}")
+        
     st.divider()
     
     # نموذج إضافة مدرب جديد
@@ -239,7 +273,7 @@ elif admin_menu == "🔑 إدارة المدربين وحسابات الأدمن
                 st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
                 
     st.markdown("---")
-    st.subheader("📋 قائمة المدربين الحاليين وخيارات الحذف:")
+    st.subheader("📋 جدول المدربين الحاليين وخيارات الحذف:")
     
     if os.path.exists(admins_db):
         try:
@@ -256,10 +290,8 @@ elif admin_menu == "🔑 إدارة المدربين وحسابات الأدمن
                     with col_info2:
                         st.text(f"🔑 اليوزر: {adm_u} | الباسورد: {adm_p}")
                     with col_info3:
-                        # منع حذف الأدمن الأساسي لو رغبت في حمايته، أو السماح بحذف الكل
                         if adm_u != "admin":
                             if st.button("🗑️ حذف", key=f"del_adm_{idx}"):
-                                # إعادة كتابة الملف بدون هذا المدرب
                                 updated_admins = []
                                 for _, r in df_all_admins.iterrows():
                                     if str(r.get('اسم_المستخدم')).strip() != str(adm_u).strip():
@@ -382,7 +414,7 @@ elif admin_menu == "📥 متابعة حلول المتدربين":
     if os.path.exists(submissions_db):
         try:
             df_subs = pd.read_csv(submissions_db, encoding="utf-8-sig", on_bad_lines="skip")
-            if not df_sub.empty if 'df_sub' in locals() else not df_subs.empty:
+            if not df_subs.empty:
                 for index, row in df_subs.iterrows():
                     st.write(f"👤 **المتدرب:** {row.get('اسم_المتدرب')} | 📋 **الواجب:** {row.get('عنوان_الواجب')} | 📅 **التاريخ:** {row.get('التاريخ')}")
                     sub_file = row.get('مسار_ملف_الحل')
