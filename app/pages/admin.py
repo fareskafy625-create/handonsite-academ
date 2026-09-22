@@ -37,6 +37,7 @@ announcements_db = "announcements.csv"
 lectures_db = "lectures.csv"
 assignments_db = "assignments.csv"
 submissions_db = "submissions.csv"
+attendance_db = "attendance.csv"
 
 # إنشاء ملف افتراضي للمدربين إذا لم يكن موجوداً
 if not os.path.exists(admins_db):
@@ -97,6 +98,7 @@ st.sidebar.markdown(f"**المدرب الحالي:** {st.session_state.get('admi
 st.sidebar.divider()
 
 admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
+    "✅ تسجيل حضور وغياب الطلاب",
     "⭐ تقييم المتدربين",
     "👥 إدارة المتدربين (عرض، إضافة، حذف)",
     "🔑 إدارة المدربين والأدمن",
@@ -114,8 +116,82 @@ if admin_menu == "🚪 تسجيل الخروج":
 st.title("👨‍💻 لوحة تحكم الأدمن - أكاديمية HandsOnSite")
 st.divider()
 
-# 1. تقييم المتدربين
-if admin_menu == "⭐ تقييم المتدربين":
+# 1. قسم تسجيل حضور وغياب الطلاب
+if admin_menu == "✅ تسجيل حضور وغياب الطلاب":
+    st.subheader("✅ تسجيل ومتابعة حضور وغياب المتدربين")
+    st.markdown("اختر المحاضرة أو التاريخ، ثم حدد حالة الحضور (حاضر / غائب) لكل طالب.")
+    st.divider()
+
+    if os.path.exists(users_db):
+        try:
+            df_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
+            if not df_users.empty:
+                with st.form("attendance_form"):
+                    att_date = st.date_input("تاريخ المحاضرة:")
+                    lecture_title_input = st.text_input("عنوان المحاضرة أو الدرس (مثال: محاضرة الشبكات رقم 1):", "محاضرة اليوم")
+                    
+                    st.markdown("### قائمة الطلاب:")
+                    attendance_status = {}
+                    
+                    for idx, row in df_users.iterrows():
+                        u_name = row.get('اسم_المتدرب', 'طالب')
+                        u_user = row.get('اسم_المستخدم', '')
+                        
+                        col_a1, col_a2 = st.columns([2, 1])
+                        with col_a1:
+                            st.write(f"👤 {u_name} ({u_user})")
+                        with col_a2:
+                            status = st.selectbox("الحالة", ["حاضر", "غائب", "متأخر"], key=f"att_{idx}")
+                            attendance_status[u_user] = {"name": u_name, "status": status}
+                    
+                    submit_attendance = st.form_submit_button("حفظ سجل الحضور والغياب")
+                    
+                    if submit_attendance:
+                        # قراءة السجلات القديمة أو إنشاء قائمة جديدة
+                        att_records = []
+                        if os.path.exists(attendance_db):
+                            df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
+                            for _, r in df_att_old.iterrows():
+                                att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
+                        
+                        # إضافة السجلات الجديدة (تحديث لنفس التاريخ والمحاضرة أو إضافة جديدة)
+                        for u_usr, data in attendance_status.items():
+                            att_records.append([str(att_date), lecture_title_input.strip(), data["name"], u_usr, data["status"]])
+                        
+                        with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
+                            w_att = csv.writer(f_att)
+                            w_att.writerow(["التاريخ", "عنوان_المحاضرة", "اسم_المتدرب", "اسم_المستخدم", "الحالة"])
+                            w_att.writerows(att_records)
+                            
+                        st.success("تم حفظ سجل الحضور والغياب بنجاح!")
+            else:
+                st.info("لا يوجد طلاب مسجلين في السيستم لتسجيل حضورهم.")
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء حفظ الحضور: {e}")
+    else:
+        st.warning("لا توجد بيانات طلاب مسجلة حتى الآن.")
+
+    st.markdown("---")
+    st.subheader("📊 سجل الحضور السابق:")
+    if os.path.exists(attendance_db):
+        try:
+            df_att_log = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
+            if not df_att_log.empty:
+                st.dataframe(df_att_log, use_container_width=True)
+                
+                if st.button("🗑️ مسح سجلات الحضور"):
+                    os.remove(attendance_db)
+                    st.success("تم مسح السجلات بنجاح!")
+                    st.rerun()
+            else:
+                st.info("لا توجد سجلات حضور مسجلة حتى الآن.")
+        except Exception as e:
+            st.error(f"خطأ في قراءة السجلات: {e}")
+    else:
+        st.info("لم يتم تسجيل أي حضور حتى الآن.")
+
+# 2. تقييم المتدربين
+elif admin_menu == "⭐ تقييم المتدربين":
     st.subheader("⭐ تقييم الأداء الأكاديمي للمتدربين")
     if os.path.exists(users_db):
         try:
@@ -170,11 +246,10 @@ if admin_menu == "⭐ تقييم المتدربين":
     else:
         st.warning("لا يوجد ملف مستخدمين مسجل حتى الآن.")
 
-# 2. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب)
+# 3. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب)
 elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، حذف)":
     st.subheader("👥 إدارة الطلاب المتدربين")
     
-    # إحصائيات سريعة للطلاب والإعلانات
     try:
         total_trainees = 0
         if os.path.exists(users_db):
@@ -196,7 +271,6 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
         
     st.divider()
     
-    # نموذج إضافة طالب جديد
     with st.expander("➕ إضافة طالب متدرب جديد"):
         with st.form("add_user_form"):
             trainee_name = st.text_input("اسم المتدرب الكامل:")
@@ -256,9 +330,9 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
     else:
         st.info("لا توجد بيانات طلاب مسجلة.")
 
-# 3. إدارة المدربين والأدمن
+# 4. إدارة المدربين والأدمن
 elif admin_menu == "🔑 إدارة المدربين والأدمن":
-    st.subheader("🔑 إدارة حسابات المدربين")
+    st.subheader("🔑 إدارة حسابات المدربين والأدمن")
     if os.path.exists(admins_db):
         try:
             df_all_admins = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
@@ -267,7 +341,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن":
         except Exception:
             pass
 
-# 4. نشر الإعلانات
+# 5. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
     st.subheader("📢 نشر إعلان جديد للمتدربين")
     with st.form("announcement_form"):
@@ -295,7 +369,7 @@ elif admin_menu == "📢 نشر الإعلانات والأخبار":
             else:
                 st.warning("الرجاء كتابة العنوان والمحتوى.")
 
-# 5. رفع ملفات المحاضرات
+# 6. رفع ملفات المحاضرات
 elif admin_menu == "📚 رفع ملفات المحاضرات":
     st.subheader("📚 إضافة ملف أو مصدر محاضرة")
     with st.form("lecture_form"):
@@ -321,7 +395,7 @@ elif admin_menu == "📚 رفع ملفات المحاضرات":
             else:
                 st.warning("الرجاء إدخال العنوان واختيار الملف.")
 
-# 6. إضافة الواجبات
+# 7. إضافة الواجبات
 elif admin_menu == "📋 إضافة الواجبات والتكاليف":
     st.subheader("📋 تكليف المتدربين بواجب جديد مع تحديد موعد تسليم")
     with st.form("assignment_form"):
@@ -342,7 +416,7 @@ elif admin_menu == "📋 إضافة الواجبات والتكاليف":
                 if asg_file is not None:
                     file_name = f"asg_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{asg_file.name}"
                     file_path = os.path.join("uploads", file_name)
-                    with open(file_path, "wb`") as f:
+                    with open(file_path, "wb") as f:
                         f.write(asg_file.getbuffer())
                 
                 file_exists = os.path.exists(assignments_db)
@@ -355,7 +429,7 @@ elif admin_menu == "📋 إضافة الواجبات والتكاليف":
             else:
                 st.warning("الرجاء إدخال عنوان الواجب.")
 
-# 7. متابعة حلول المتدربين
+# 8. متابعة حلول المتدربين
 elif admin_menu == "📥 متابعة حلول المتدربين":
     st.subheader("📥 حلول الواجبات المرسلة من المتدربين")
     if os.path.exists(submissions_db):
