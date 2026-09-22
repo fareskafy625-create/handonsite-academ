@@ -128,7 +128,6 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
         group_name = st.text_input("اسم الجروب (مثال: جروب الشبكات A - صباحي):")
         session_day = st.selectbox("اليوم:", ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"])
         session_time = st.text_input("موعد المحاضرة (مثال: من 4 لـ 6 عصراً):")
-        room_or_link = st.text_input("رقم القاعة أو رابط المحاضرة أونلاين:")
         notes = st.text_area("ملاحظات أو تفاصيل إضافية للجروب:")
         
         submit_group_sch = st.form_submit_button("حفظ وإضافة الموعد للجروب")
@@ -139,13 +138,13 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
                 if os.path.exists(groups_schedule_db):
                     df_old_sch = pd.read_csv(groups_schedule_db, encoding="utf-8-sig", on_bad_lines="skip")
                     for _, r in df_old_sch.iterrows():
-                        sched_records.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('القاعة_او_الرابط'), r.get('ملاحظات')])
+                        sched_records.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('ملاحظات')])
                 
-                sched_records.append([group_name.strip(), session_day, session_time.strip(), room_or_link.strip(), notes.strip()])
+                sched_records.append([group_name.strip(), session_day, session_time.strip(), notes.strip()])
                 
                 with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sch:
                     w_sch = csv.writer(f_sch)
-                    w_sch.writerow(["اسم_الجروب", "اليوم", "الموعد", "القاعة_او_الرابط", "ملاحظات"])
+                    w_sch.writerow(["اسم_الجروب", "اليوم", "الموعد", "ملاحظات"])
                     w_sch.writerows(sched_records)
                     
                 st.success(f"تم حفظ موعد الجروب ({group_name}) بنجاح!")
@@ -162,7 +161,6 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
                     g_name = row.get('اسم_الجروب', '')
                     g_day = row.get('اليوم', '')
                     g_time = row.get('الموعد', '')
-                    g_link = row.get('القاعة_او_الرابط', '')
                     g_notes = row.get('ملاحظات', '')
                     
                     sc1, sc2, sc3 = st.columns([2, 2, 1])
@@ -171,17 +169,16 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
                         st.caption(f"📝 ملاحظات: {g_notes}")
                     with sc2:
                         st.text(f"📅 اليوم: {g_day} | ⏰ الوقت: {g_time}")
-                        st.text(f"📍 المكان/الرابط: {g_link}")
                     with sc3:
                         if st.button("🗑️ حذف الموعد", key=f"del_sch_{idx}"):
                             updated_sch = []
                             for _, r in df_all_sch.iterrows():
                                 if not (str(r.get('اسم_الجروب')).strip() == str(g_name).strip() and str(r.get('الموعد')).strip() == str(g_time).strip()):
-                                    updated_sch.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('القاعة_او_الرابط'), r.get('ملاحظات')])
+                                    updated_sch.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('ملاحظات')])
                             
                             with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sout:
                                 w_sout = csv.writer(f_sout)
-                                w_sout.writerow(["اسم_الجروب", "اليوم", "الموعد", "القاعة_او_الرابط", "ملاحظات"])
+                                w_sout.writerow(["اسم_الجروب", "اليوم", "الموعد", "ملاحظات"])
                                 w_sout.writerows(updated_sch)
                             
                             st.success(f"تم حذف موعد الجروب ({g_name}) بنجاح!")
