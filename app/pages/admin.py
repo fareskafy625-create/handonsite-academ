@@ -38,6 +38,7 @@ lectures_db = "lectures.csv"
 assignments_db = "assignments.csv"
 submissions_db = "submissions.csv"
 attendance_db = "attendance.csv"
+groups_schedule_db = "groups_schedule.csv"
 
 # إنشاء ملف افتراضي للمدربين إذا لم يكن موجوداً
 if not os.path.exists(admins_db):
@@ -98,6 +99,7 @@ st.sidebar.markdown(f"**المدرب الحالي:** {st.session_state.get('admi
 st.sidebar.divider()
 
 admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
+    "📅 جداول مواعيد المجموعات (Groups)",
     "✅ تسجيل حضور وغياب الطلاب",
     "⭐ تقييم المتدربين",
     "👥 إدارة المتدربين (عرض، إضافة، حذف)",
@@ -116,19 +118,92 @@ if admin_menu == "🚪 تسجيل الخروج":
 st.title("👨‍💻 لوحة تحكم الأدمن - أكاديمية HandsOnSite")
 st.divider()
 
-# 1. قسم تسجيل حضور وغياب الطلاب
-if admin_menu == "✅ تسجيل حضور وغياب الطلاب":
-    st.subheader("✅ تسجيل ومتابعة حضور وغياب المتدربين")
-    st.markdown("اختر المحاضرة أو التاريخ، ثم حدد حالة الحضور (حاضر / غائب) لكل طالب.")
+# 1. جداول مواعيد المجموعات
+if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
+    st.subheader("📅 إضافة وإدارة جدول مواعيد لكل جروب تدريبي")
+    st.markdown("قم بإنشاء جدول أو مواعيد خاصة بكل مجموعة من مجموعات الشبكات والـ IT.")
     st.divider()
 
+    with st.form("group_schedule_form"):
+        group_name = st.text_input("اسم الجروب (مثال: جروب الشبكات A - صباحي):")
+        session_day = st.selectbox("اليوم:", ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"])
+        session_time = st.text_input("موعد المحاضرة (مثال: من 4 لـ 6 عصراً):")
+        room_or_link = st.text_input("رقم القاعة أو رابط المحاضرة أونلاين:")
+        notes = st.text_area("ملاحظات أو تفاصيل إضافية للجروب:")
+        
+        submit_group_sch = st.form_submit_button("حفظ وإضافة الموعد للجروب")
+        
+        if submit_group_sch:
+            if group_name and session_time:
+                sched_records = []
+                if os.path.exists(groups_schedule_db):
+                    df_old_sch = pd.read_csv(groups_schedule_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    for _, r in df_old_sch.iterrows():
+                        sched_records.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('القاعة_او_الرابط'), r.get('ملاحظات')])
+                
+                sched_records.append([group_name.strip(), session_day, session_time.strip(), room_or_link.strip(), notes.strip()])
+                
+                with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sch:
+                    w_sch = csv.writer(f_sch)
+                    w_sch.writerow(["اسم_الجروب", "اليوم", "الموعد", "القاعة_او_الرابط", "ملاحظات"])
+                    w_sch.writerows(sched_records)
+                    
+                st.success(f"تم حفظ موعد الجروب ({group_name}) بنجاح!")
+            else:
+                st.warning("الرجاء إدخال اسم الجروب وموعد المحاضرة على الأقل.")
+
+    st.markdown("---")
+    st.subheader("📋 جدول المجموعات والمواعيد الحالية:")
+    if os.path.exists(groups_schedule_db):
+        try:
+            df_all_sch = pd.read_csv(groups_schedule_db, encoding="utf-8-sig", on_bad_lines="skip")
+            if not df_all_sch.empty:
+                for idx, row in df_all_sch.iterrows():
+                    g_name = row.get('اسم_الجروب', '')
+                    g_day = row.get('اليوم', '')
+                    g_time = row.get('الموعد', '')
+                    g_link = row.get('القاعة_او_الرابط', '')
+                    g_notes = row.get('ملاحظات', '')
+                    
+                    sc1, sc2, sc3 = st.columns([2, 2, 1])
+                    with sc1:
+                        st.markdown(f"👥 **الجروب:** {g_name}")
+                        st.caption(f"📝 ملاحظات: {g_notes}")
+                    with sc2:
+                        st.text(f"📅 اليوم: {g_day} | ⏰ الوقت: {g_time}")
+                        st.text(f"📍 المكان/الرابط: {g_link}")
+                    with sc3:
+                        if st.button("🗑️ حذف الموعد", key=f"del_sch_{idx}"):
+                            updated_sch = []
+                            for _, r in df_all_sch.iterrows():
+                                if not (str(r.get('اسم_الجروب')).strip() == str(g_name).strip() and str(r.get('الموعد')).strip() == str(g_time).strip()):
+                                    updated_sch.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('القاعة_او_الرابط'), r.get('ملاحظات')])
+                            
+                            with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sout:
+                                w_sout = csv.writer(f_sout)
+                                w_sout.writerow(["اسم_الجروب", "اليوم", "الموعد", "القاعة_او_الرابط", "ملاحظات"])
+                                w_sout.writerows(updated_sch)
+                            
+                            st.success(f"تم حذف موعد الجروب ({g_name}) بنجاح!")
+                            st.rerun()
+                    st.write("---")
+            else:
+                st.info("لا توجد مواعيد مضافة للمجموعات حتى الآن.")
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء قراءة جداول المجموعات: {e}")
+    else:
+        st.info("لا توجد جداول مجموعات مسجلة.")
+
+# 2. تسجيل حضور وغياب الطلاب
+elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
+    st.subheader("✅ تسجيل ومتابعة حضور وغياب المتدربين")
     if os.path.exists(users_db):
         try:
             df_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
             if not df_users.empty:
                 with st.form("attendance_form"):
                     att_date = st.date_input("تاريخ المحاضرة:")
-                    lecture_title_input = st.text_input("عنوان المحاضرة أو الدرس (مثال: محاضرة الشبكات رقم 1):", "محاضرة اليوم")
+                    lecture_title_input = st.text_input("عنوان المحاضرة أو الدرس:", "محاضرة اليوم")
                     
                     st.markdown("### قائمة الطلاب:")
                     attendance_status = {}
@@ -147,14 +222,12 @@ if admin_menu == "✅ تسجيل حضور وغياب الطلاب":
                     submit_attendance = st.form_submit_button("حفظ سجل الحضور والغياب")
                     
                     if submit_attendance:
-                        # قراءة السجلات القديمة أو إنشاء قائمة جديدة
                         att_records = []
                         if os.path.exists(attendance_db):
                             df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
                             for _, r in df_att_old.iterrows():
                                 att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
                         
-                        # إضافة السجلات الجديدة (تحديث لنفس التاريخ والمحاضرة أو إضافة جديدة)
                         for u_usr, data in attendance_status.items():
                             att_records.append([str(att_date), lecture_title_input.strip(), data["name"], u_usr, data["status"]])
                         
@@ -165,11 +238,11 @@ if admin_menu == "✅ تسجيل حضور وغياب الطلاب":
                             
                         st.success("تم حفظ سجل الحضور والغياب بنجاح!")
             else:
-                st.info("لا يوجد طلاب مسجلين في السيستم لتسجيل حضورهم.")
+                st.info("لا يوجد طلاب مسجلين.")
         except Exception as e:
-            st.error(f"حدث خطأ أثناء حفظ الحضور: {e}")
+            st.error(f"خطأ: {e}")
     else:
-        st.warning("لا توجد بيانات طلاب مسجلة حتى الآن.")
+        st.warning("لا توجد بيانات طلاب مسجلة.")
 
     st.markdown("---")
     st.subheader("📊 سجل الحضور السابق:")
@@ -178,19 +251,16 @@ if admin_menu == "✅ تسجيل حضور وغياب الطلاب":
             df_att_log = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
             if not df_att_log.empty:
                 st.dataframe(df_att_log, use_container_width=True)
-                
                 if st.button("🗑️ مسح سجلات الحضور"):
                     os.remove(attendance_db)
                     st.success("تم مسح السجلات بنجاح!")
                     st.rerun()
             else:
-                st.info("لا توجد سجلات حضور مسجلة حتى الآن.")
+                st.info("لا توجد سجلات حضور.")
         except Exception as e:
-            st.error(f"خطأ في قراءة السجلات: {e}")
-    else:
-        st.info("لم يتم تسجيل أي حضور حتى الآن.")
+            st.error(f"خطأ: {e}")
 
-# 2. تقييم المتدربين
+# 3. تقييم المتدربين
 elif admin_menu == "⭐ تقييم المتدربين":
     st.subheader("⭐ تقييم الأداء الأكاديمي للمتدربين")
     if os.path.exists(users_db):
@@ -238,15 +308,15 @@ elif admin_menu == "⭐ تقييم المتدربين":
                             w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
                             w_p.writerows(profiles_list)
                         
-                        st.success(f"تم تحديث تقييم المتدرب بنجاح إلى: ({new_evaluation})")
+                        st.success(f"تم تحديث التقييم بنجاح إلى: ({new_evaluation})")
             else:
-                st.info("لا يوجد متدربين مسجلين بعد.")
+                st.info("لا يوجد متدربين.")
         except Exception as e:
-            st.error(f"حدث خطأ: {e}")
+            st.error(f"خطأ: {e}")
     else:
-        st.warning("لا يوجد ملف مستخدمين مسجل حتى الآن.")
+        st.warning("لا توجد بيانات مستخدمين.")
 
-# 3. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب)
+# 4. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب)
 elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، حذف)":
     st.subheader("👥 إدارة الطلاب المتدربين")
     
@@ -276,7 +346,7 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
             trainee_name = st.text_input("اسم المتدرب الكامل:")
             trainee_username = st.text_input("اسم المستخدم (Username):")
             trainee_password = st.text_input("كلمة المرور:", type="password")
-            trainee_track = st.selectbox("المسار التدريبي:", ["Embeded Systems", "Networks & IT", "Python Development", "Web Development", "Robotics & STEM"])
+            trainee_track = st.selectbox("المسار التدريبي:", ["Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security"])
             
             submit_user = st.form_submit_button("إضافة الطالب")
             
@@ -324,13 +394,13 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
                             st.rerun()
                     st.write("---")
             else:
-                st.info("لا يوجد طلاب متدربين مسجلين حتى الآن.")
+                st.info("لا يوجد طلاب متدربين.")
         except Exception as e:
-            st.error(f"حدث خطأ أثناء قراءة بيانات الطلاب: {e}")
+            st.error(f"خطأ: {e}")
     else:
-        st.info("لا توجد بيانات طلاب مسجلة.")
+        st.info("لا توجد بيانات طلاب.")
 
-# 4. إدارة المدربين والأدمن
+# 5. إدارة المدربين والأدمن
 elif admin_menu == "🔑 إدارة المدربين والأدمن":
     st.subheader("🔑 إدارة حسابات المدربين والأدمن")
     if os.path.exists(admins_db):
@@ -341,7 +411,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن":
         except Exception:
             pass
 
-# 5. نشر الإعلانات
+# 6. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
     st.subheader("📢 نشر إعلان جديد للمتدربين")
     with st.form("announcement_form"):
@@ -369,13 +439,13 @@ elif admin_menu == "📢 نشر الإعلانات والأخبار":
             else:
                 st.warning("الرجاء كتابة العنوان والمحتوى.")
 
-# 6. رفع ملفات المحاضرات
+# 7. رفع ملفات المحاضرات
 elif admin_menu == "📚 رفع ملفات المحاضرات":
-    st.subheader("📚 إضافة ملف أو مصدر محاضرة")
+    st.subheader("📚 إضافة ملف أو مصدر محاضرة للشبكات")
     with st.form("lecture_form"):
-        track = st.selectbox("المسار المستهدف:", ["الكل", "Embeded Systems", "Networks & IT", "Python Development", "Web Development", "Robotics & STEM"])
+        track = st.selectbox("المسار المستهدف:", ["الكل", "Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security"])
         lec_title = st.text_input("عنوان المحاضرة أو الدرس:")
-        lec_file = st.file_uploader("ملف المحاضرة (PDF / ZIP / Code):", type=["pdf", "zip", "rar", "py", "txt", "docx"])
+        lec_file = st.file_uploader("ملف المحاضرة (PDF / Packet Tracer / Code):", type=["pdf", "zip", "rar", "pkt", "txt", "docx"])
         submit_lec = st.form_submit_button("رفع الملف")
         
         if submit_lec:
@@ -395,7 +465,7 @@ elif admin_menu == "📚 رفع ملفات المحاضرات":
             else:
                 st.warning("الرجاء إدخال العنوان واختيار الملف.")
 
-# 7. إضافة الواجبات
+# 8. إضافة الواجبات
 elif admin_menu == "📋 إضافة الواجبات والتكاليف":
     st.subheader("📋 تكليف المتدربين بواجب جديد مع تحديد موعد تسليم")
     with st.form("assignment_form"):
@@ -429,7 +499,7 @@ elif admin_menu == "📋 إضافة الواجبات والتكاليف":
             else:
                 st.warning("الرجاء إدخال عنوان الواجب.")
 
-# 8. متابعة حلول المتدربين
+# 9. متابعة حلول المتدربين
 elif admin_menu == "📥 متابعة حلول المتدربين":
     st.subheader("📥 حلول الواجبات المرسلة من المتدربين")
     if os.path.exists(submissions_db):
