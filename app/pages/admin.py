@@ -100,7 +100,7 @@ st.sidebar.divider()
 admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
     "⭐ تقييم المتدربين",
     "👥 إدارة المتدربين (إضافة حسابات)",
-    "🔑 إدارة المدربين (إنشاء حسابات للأدمن)",
+    "🔑 إدارة المدربين وحسابات الأدمن",
     "📢 نشر الإعلانات والأخبار",
     "📚 رفع ملفات المحاضرات",
     "📋 إضافة الواجبات والتكاليف",
@@ -113,7 +113,7 @@ if admin_menu == "🚪 تسجيل الخروج":
     st.rerun()
 
 st.title("👨‍💻 لوحة تحكم الأدمن - أكاديمية HandsOnSite")
-st.markdown(f"مرحباً بك ({st.session_state.get('admin_name', 'مدرب')}). يمكنك من هنا إدارة المتدربين، التقييمات، المحاضرات، الواجبات، والإعلانات.")
+st.markdown(f"مرحباً بك ({st.session_state.get('admin_name', 'مدرب')}). يمكنك من هنا إدارة المتدربين، المدربين، التقييمات، المحاضرات، الواجبات، والإعلانات.")
 st.divider()
 
 # 1. قسم تقييم المتدربين
@@ -206,13 +206,15 @@ elif admin_menu == "👥 إدارة المتدربين (إضافة حسابات)
             else:
                 st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
 
-# 3. قسم إدارة المدربين (إنشاء حسابات للأدمن)
-elif admin_menu == "🔑 إدارة المدربين (إنشاء حسابات للأدمن)":
-    st.subheader("🔑 إضافة حساب مدرب جديد (أدمن آخر)")
-    st.markdown("يمكنك من هنا إنشاء حساب جديد لأي مدرب زميل لكي يتمكن من تسجيل الدخول إلى لوحة التحكم بصلاحيات الأدمن.")
+# 3. قسم إدارة المدربين (عرض، إضافة، وحذف حسابات الأدمن)
+elif admin_menu == "🔑 إدارة المدربين وحسابات الأدمن":
+    st.subheader("🔑 إدارة حسابات المدربين (الأدمن)")
+    st.markdown("يمكنك هنا متابعة جميع المدربين المسجلين، إضافة مدرب جديد، أو حذف أي مدرب بسهولة.")
     st.divider()
     
+    # نموذج إضافة مدرب جديد
     with st.form("add_admin_form"):
+        st.markdown("### ➕ إضافة مدرب جديد")
         new_adm_name = st.text_input("اسم المدرب (مثل: م. أحمد / م. محمود):")
         new_adm_user = st.text_input("اسم المستخدم الخاص بالمدرب (للدخول به):")
         new_adm_pass = st.text_input("كلمة المرور الخاصة بالمدرب:", type="password")
@@ -229,20 +231,54 @@ elif admin_menu == "🔑 إدارة المدربين (إنشاء حسابات ل
                         with open(admins_db, mode="a", encoding="utf-8-sig", newline="") as f:
                             w = csv.writer(f)
                             w.writerow([new_adm_user.strip(), new_adm_pass.strip(), new_adm_name.strip()])
-                        st.success(f"تم إنشاء حساب المدرب ({new_adm_name}) بنجاح! يمكنه الآن تسجيل الدخول.")
+                        st.success(f"تم إنشاء حساب المدرب ({new_adm_name}) بنجاح!")
+                        st.rerun()
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء حفظ حساب المدرب: {e}")
             else:
                 st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
                 
     st.markdown("---")
-    st.subheader("📋 قائمة المدربين الحاليين في النظام:")
+    st.subheader("📋 قائمة المدربين الحاليين وخيارات الحذف:")
+    
     if os.path.exists(admins_db):
         try:
             df_all_admins = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
-            st.dataframe(df_all_admins[["اسم_المدرب", "اسم_المستخدم"]], use_container_width=True)
-        except Exception:
-            pass
+            if not df_all_admins.empty:
+                for idx, row in df_all_admins.iterrows():
+                    adm_n = row.get('اسم_المدرب', '')
+                    adm_u = row.get('اسم_المستخدم', '')
+                    adm_p = row.get('كلمة_المرور', '')
+                    
+                    col_info1, col_info2, col_info3 = st.columns([2, 2, 1])
+                    with col_info1:
+                        st.text(f"👤 الاسم: {adm_n}")
+                    with col_info2:
+                        st.text(f"🔑 اليوزر: {adm_u} | الباسورد: {adm_p}")
+                    with col_info3:
+                        # منع حذف الأدمن الأساسي لو رغبت في حمايته، أو السماح بحذف الكل
+                        if adm_u != "admin":
+                            if st.button("🗑️ حذف", key=f"del_adm_{idx}"):
+                                # إعادة كتابة الملف بدون هذا المدرب
+                                updated_admins = []
+                                for _, r in df_all_admins.iterrows():
+                                    if str(r.get('اسم_المستخدم')).strip() != str(adm_u).strip():
+                                        updated_admins.append([r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('اسم_المدرب')])
+                                
+                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_out:
+                                    w_out = csv.writer(f_out)
+                                    w_out.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
+                                    w_out.writerows(updated_admins)
+                                
+                                st.success(f"تم حذف المدرب ({adm_n}) بنجاح!")
+                                st.rerun()
+                        else:
+                            st.caption("الحساب الرئيسي")
+                    st.write("---")
+            else:
+                st.info("لا يوجد مدربين مسجلين.")
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء قراءة بيانات المدربين: {e}")
 
 # 4. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
@@ -346,7 +382,7 @@ elif admin_menu == "📥 متابعة حلول المتدربين":
     if os.path.exists(submissions_db):
         try:
             df_subs = pd.read_csv(submissions_db, encoding="utf-8-sig", on_bad_lines="skip")
-            if not df_subs.empty:
+            if not df_sub.empty if 'df_sub' in locals() else not df_subs.empty:
                 for index, row in df_subs.iterrows():
                     st.write(f"👤 **المتدرب:** {row.get('اسم_المتدرب')} | 📋 **الواجب:** {row.get('عنوان_الواجب')} | 📅 **التاريخ:** {row.get('التاريخ')}")
                     sub_file = row.get('مسار_ملف_الحل')
