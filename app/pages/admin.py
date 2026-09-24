@@ -7,7 +7,7 @@ from datetime import datetime
 # إعدادات صفحة الأدمن
 st.set_page_config(page_title="تسجيل دخول الأدمن - أكاديمية HandsOnSite", page_icon="👨‍💻", layout="wide")
 
-# تصميم CSS مخصص لتجميل شكل لوحة التحكم والخلفية الشفافة الزجاجية
+# تصميم CSS مخصص لتجميل شكل لوحة التحكم والأزرار الجانبية والخلفية الشفافة الزجاجية
 st.markdown("""
     <style>
     .main { background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(244, 246, 249, 0.85) 100%); }
@@ -23,6 +23,11 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #0b5ed7;
         color: white;
+    }
+    /* تصميم خاص لأزرار القائمة الجانبية لتكون بشكل شيك وأنيق */
+    .sidebar-btn {
+        width: 100%;
+        margin-bottom: 5px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -96,12 +101,19 @@ if not st.session_state.admin_logged_in:
                     st.warning("الرجاء إدخال اسم المستخدم وكلمة المرور.")
     st.stop()
 
-# --- القائمة الجانبية للأدمن ---
+# --- القائمة الجانبية للأدمن (أزرار تفاعلية شيك) ---
 st.sidebar.markdown(f"### أهلاً بك يا بشمهندس فارس 👋")
 st.sidebar.markdown(f"**المدرب الحالي:** {st.session_state.get('admin_name', 'مدرب')}")
 st.sidebar.divider()
 
-admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
+st.sidebar.markdown("<p style='color: #6c757d; font-size: 13px; font-weight: bold;'>خيارات لوحة التحكم:</p>", unsafe_allow_html=True)
+
+# تعريف حالة الصفحة الحالية في الـ session_state إذا لم تكن موجودة
+if 'admin_page' not in st.session_state:
+    st.session_state.admin_page = "📅 جداول مواعيد المجموعات (Groups)"
+
+# تعريف خيارات القائمة
+menu_options = [
     "📅 جداول مواعيد المجموعات (Groups)",
     "✅ تسجيل حضور وغياب الطلاب",
     "⭐ تقييم المتدربين وملاحظات التحسين",
@@ -113,11 +125,23 @@ admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
     "📋 إضافة الواجبات والتكاليف",
     "📥 متابعة حلول المتدربين",
     "🚪 تسجيل الخروج"
-])
+]
 
-if admin_menu == "🚪 تسجيل الخروج":
-    st.session_state.admin_logged_in = False
-    st.rerun()
+# رسم أزرار القائمة الجانبية بشكل شيك ومنظم
+for option in menu_options:
+    # تمييز الزر الحالي بلون مختلف ليعرف المستخدم الصفحة التي هو فيها
+    is_current = (st.session_state.admin_page == option)
+    btn_type = "primary" if is_current else "secondary"
+    
+    if st.sidebar.button(option, key=f"sidebar_btn_{option}", type=btn_type):
+        if option == "🚪 تسجيل الخروج":
+            st.session_state.admin_logged_in = False
+            st.rerun()
+        else:
+            st.session_state.admin_page = option
+            st.rerun()
+
+admin_menu = st.session_state.admin_page
 
 st.title("👨‍💻 لوحة تحكم الأدمن - أكاديمية HandsOnSite")
 st.divider()
@@ -196,7 +220,7 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
     st.divider()
 
     # شريط البحث السريع للوصول للطالب المراد تسجيله
-    att_search_query = st.text_input("🔍 :", "").strip()
+    att_search_query = st.text_input("🔍 شريط البحث السريع (اكتب اسم الطالب لتصفيته أو اتركه فارغاً لعرض الكل):", "").strip()
 
     if os.path.exists(users_db):
         try:
