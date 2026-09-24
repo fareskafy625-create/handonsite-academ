@@ -298,14 +298,12 @@ elif admin_menu == "⭐ تقييم المتدربين وملاحظات التح�
                         val_found = str(current_user_prof.iloc[0].get('التقييم', ''))
                         if val_found in eval_choices:
                             default_eval_val = val_found
-                        # قراءة النبذة/الملاحظات الحالية إن وجدت
                         notes_found = str(current_user_prof.iloc[0].get('نبذة', ''))
                         if notes_found != "nan":
                             default_notes_val = notes_found
                     
                     new_evaluation = st.selectbox("التقييم الأكاديمي الجديد:", eval_choices, index=eval_choices.index(default_eval_val) if default_eval_val in eval_choices else 0)
                     
-                    # خانة الكومنت أو المشكلة التي يجب على الطالب حلها
                     improvement_comment = st.text_area(
                         "📝 كومنت / ملاحظات المدرب (تحديد المشكلة أو النقاط التي يجب على الطالب حلها):",
                         value=default_notes_val,
@@ -324,7 +322,6 @@ elif admin_menu == "⭐ تقييم المتدربين وملاحظات التح�
                         if not current_user_prof.empty:
                             old_avatar = str(current_user_prof.iloc[0].get('الصورة_الشخصية', ''))
                             
-                        # حفظ التقييم والنبيذ/الكومنت في خانة 'نبذة' أو الملاحظات
                         profiles_list.append([chosen_username, old_avatar, new_evaluation, improvement_comment.strip()])
                         
                         with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
@@ -591,6 +588,41 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                 else:
                     st.warning("الرجاء تعبئة جميع حقول كلمة المرور.")
 
+    st.markdown("---")
+    st.markdown("### 📋 قائمة المدربين المسجلين في النظام:")
+    if os.path.exists(admins_db):
+        try:
+            df_all_admins = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_all_admins.columns = df_all_admins.columns.str.strip()
+            if not df_all_admins.empty:
+                for idx, row in df_all_admins.iterrows():
+                    a_name = row.get('اسم_المدرب', '')
+                    a_user = row.get('اسم_المستخدم', '')
+                    
+                    ac1, ac2 = st.columns([3, 1])
+                    with ac1:
+                        st.text(f"👤 المدرب: {a_name} | 💻 اسم المستخدم: {a_user}")
+                    with ac2:
+                        if a_user != "admin" and a_user != st.session_state.get('admin_username', ''):
+                            if st.button("🗑️ حذف الحساب", key=f"del_adm_{idx}"):
+                                updated_admins_list = []
+                                for _, r in df_all_admins.iterrows():
+                                    if str(r.get('اسم_المستخدم')).strip() != str(a_user).strip():
+                                        updated_admins_list.append([r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('اسم_المدرب')])
+                                
+                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_aout:
+                                    w_aout = csv.writer(f_aout)
+                                    w_aout.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
+                                    w_aout.writerows(updated_admins_list)
+                                
+                                st.success(f"تم حذف حساب المدرب ({a_name}) بنجاح!")
+                                st.rerun()
+                        else:
+                            st.caption("الحساب الأساسي (محمي)")
+                    st.write("---")
+        except Exception as e:
+            st.error(f"خطأ في عرض المدربين: {e}")
+
 # 7. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
     st.subheader("📢 نشر إعلان جديد للمتدربين")
@@ -645,19 +677,30 @@ elif admin_menu == "📚 رفع ملفات المحاضرات":
             else:
                 st.warning("الرجاء إدخال العنوان واختيار الملف.")
 
-# 9. إضافة الواجبات
+# 9. إضافة الواجبات (تم إلغاء خانة الوصف وإظهار حالة رفع الملف بوضوح)
 elif admin_menu == "📋 إضافة الواجبات والتكاليف":
     st.subheader("📋 تكليف المتدربين بواجب جديد مع تحديد موعد تسليم")
+    
     with st.form("assignment_form"):
-        asg_title = st.text_input("عنوان الواجب:")
-        asg_desc = st.text_area("وصف الواجب والتعليمات:")
+        asg_title = st.text_input("عنوان الواجب (مثال: واجب تكوين الـ OSPF):")
+        
         col_d1, col_d2 = st.columns(2)
         with col_d1:
             asg_deadline_date = st.date_input("تاريخ آخر موعد للتسليم:")
         with col_d2:
             asg_deadline_time = st.time_input("وقت آخر موعد للتسليم:")
-        asg_file = st.file_uploader("ملف الأسئلة (PDF):", type=["pdf", "docx"])
-        submit_asg = st.form_submit_button("نشر الواجب")
+            
+        st.markdown("---")
+        st.markdown("📁 **ملف الأسئلة الخاص بالواجب:**")
+        asg_file = st.file_uploader("اختر ملف الأسئلة (PDF / Word):", type=["pdf", "docx"])
+        
+        # مؤشر مرئي وواضح يوضح حالة الأسيمنت
+        if asg_file is not None:
+            st.success(f"✔️ تم اختيار ملف الأسئلة بنجاح: **{asg_file.name}** (جاهز للنشر)")
+        else:
+            st.info("ℹ️ لم تقم برفع ملف بعد، يمكنك رفع ملف الأسئلة أو نشر الواجب بالعنوان والموعد مباشرة.")
+
+        submit_asg = st.form_submit_button("نشر الواجب للمتدربين")
         
         if submit_asg:
             if asg_title:
@@ -673,11 +716,13 @@ elif admin_menu == "📋 إضافة الواجبات والتكاليف":
                 with open(assignments_db, mode="a", encoding="utf-8-sig", newline="") as f:
                     w = csv.writer(f)
                     if not file_exists:
-                        w.writerow(["العنوان", "الوصف", "مسار_ملف_الأسئلة", "الديدلاين", "التاريخ"])
-                    w.writerow([asg_title, asg_desc, file_path, deadline_str, datetime.now().strftime("%Y-%m-%d")])
-                st.success("تم نشر الواجب بنجاح!")
+                        # تم الاستغناء عن عمود الوصف وإبقائه فارغاً أو مخصصاً لملف الأسئلة
+                        w.writerow(["العنوان", "مسار_ملف_الأسئلة", "الديدلاين", "التاريخ"])
+                    w.writerow([asg_title.strip(), file_path, deadline_str, datetime.now().strftime("%Y-%m-%d")])
+                
+                st.success(f"تم نشر الواجب ({asg_title}) بنجاح للمتدربين!")
             else:
-                st.warning("الرجاء إدخال عنوان الواجب.")
+                st.warning("الرجاء إدخال عنوان الواجب على الأقل.")
 
 # 10. متابعة حلول المتدربين
 elif admin_menu == "📥 متابعة حلول المتدربين":
