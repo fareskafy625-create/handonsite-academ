@@ -39,6 +39,7 @@ assignments_db = "assignments.csv"
 submissions_db = "submissions.csv"
 attendance_db = "attendance.csv"
 groups_schedule_db = "groups_schedule.csv"
+graduates_db = "graduates.csv"  # ملف سجل خريجي التدريب
 
 # ضمان وجود ملف المدربين الأساسي بالأعمدة الصحيحة
 if not os.path.exists(admins_db):
@@ -105,6 +106,7 @@ admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
     "✅ تسجيل حضور وغياب الطلاب",
     "⭐ تقييم المتدربين",
     "👥 إدارة المتدربين (عرض، إضافة، حذف)",
+    "🎓 خريجي التدريب (سجل الخريجين)",
     "🔑 إدارة المدربين والأدمن وتغيير الباسورد",
     "📢 نشر الإعلانات والأخبار",
     "📚 رفع ملفات المحاضرات",
@@ -409,7 +411,91 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
     else:
         st.info("لا توجد بيانات طلاب.")
 
-# 5. إدارة المدربين والأدمن وتغيير الباسورد
+# 5. خريجي التدريب (سجل الخريجين والمدربين المنتهين)
+elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
+    st.subheader("🎓 سجل خريجي التدريب والطلاب الذين أكملوا الكورس بنجاح")
+    st.markdown("يمكنك إضافة اسم الخريج/المدرب، رقم التليفون، والتقييم النهائي بنهاية التدريب.")
+    st.divider()
+
+    with st.form("add_graduate_form"):
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            grad_name = st.text_input("اسم الخريج / المتدرب بالكامل:")
+            grad_phone = st.text_input("رقم التليفون / الموبايل:")
+        with col_g2:
+            grad_track = st.selectbox("المسار أو الكورس:", ["Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security", "برمجة وروبوتات"])
+            grad_eval = st.selectbox("التقييم النهائي بنهاية الكورس:", ["⭐ ممتاز جداً مع مرتبة الشرف", "⭐ ممتاز", "⭐ جيد جداً", "⭐ جيد", "⭐ مجتاز التدريب بنجاح"])
+        
+        grad_notes = st.text_area("ملاحظات إضافية (أو مكان العمل/المهارة المكتسبة):")
+        
+        submit_grad = st.form_submit_button("حفظ وإضافة إلى سجل الخريجين")
+        
+        if submit_grad:
+            if grad_name and grad_phone:
+                grad_records = []
+                if os.path.exists(graduates_db):
+                    df_old_grad = pd.read_csv(graduates_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    df_old_grad.columns = df_old_grad.columns.str.strip()
+                    for _, r in df_old_grad.iterrows():
+                        grad_records.append([r.get('الاسم'), r.get('رقم_التليفون'), r.get('المسار'), r.get('التقييم'), r.get('ملاحظات')])
+                
+                grad_records.append([grad_name.strip(), grad_phone.strip(), grad_track, grad_eval, grad_notes.strip()])
+                
+                with open(graduates_db, mode="w", encoding="utf-8-sig", newline="") as f_g:
+                    w_g = csv.writer(f_g)
+                    w_g.writerow(["الاسم", "رقم_التليفون", "المسار", "التقييم", "ملاحظات"])
+                    w_g.writerows(grad_records)
+                    
+                st.success(f"تم حفظ الخريج ({grad_name}) في السجل بنجاح!")
+            else:
+                st.warning("الرجاء إدخال اسم الخريج ورقم التليفون على الأقل.")
+
+    st.markdown("---")
+    st.subheader("📋 قائمة خريجي التدريب المسجلين:")
+    if os.path.exists(graduates_db):
+        try:
+            df_all_grads = pd.read_csv(graduates_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_all_grads.columns = df_all_grads.columns.str.strip()
+            if not df_all_grads.empty:
+                for idx, row in df_all_grads.iterrows():
+                    g_name = row.get('الاسم', '')
+                    g_phone = row.get('رقم_التليفون', '')
+                    g_track = row.get('المسار', '')
+                    g_eval = row.get('التقييم', '')
+                    g_notes = row.get('ملاحظات', '')
+                    
+                    gc1, gc2, gc3 = st.columns([2, 2, 1])
+                    with gc1:
+                        st.markdown(f"🎓 **الخريج:** {g_name}")
+                        st.text(f"📞 هاتف: {g_phone}")
+                    with gc2:
+                        st.text(f"💻 المسار: {g_track}")
+                        st.markdown(f"**التقييم:** {g_eval}")
+                        if g_notes:
+                            st.caption(f"📝 ملاحظات: {g_notes}")
+                    with gc3:
+                        if st.button("🗑️ حذف من السجل", key=f"del_grad_{idx}"):
+                            updated_grads = []
+                            for _, r in df_all_grads.iterrows():
+                                if not (str(r.get('الاسم')).strip() == str(g_name).strip() and str(r.get('رقم_التليفون')).strip() == str(g_phone).strip()):
+                                    updated_grads.append([r.get('الاسم'), r.get('رقم_التليفون'), r.get('المسار'), r.get('التقييم'), r.get('ملاحظات')])
+                            
+                            with open(graduates_db, mode="w", encoding="utf-8-sig", newline="") as f_gout:
+                                w_gout = csv.writer(f_gout)
+                                w_gout.writerow(["الاسم", "رقم_التليفون", "المسار", "التقييم", "ملاحظات"])
+                                w_gout.writerows(updated_grads)
+                            
+                            st.success(f"تم حذف الخريج ({g_name}) من السجل بنجاح!")
+                            st.rerun()
+                    st.write("---")
+            else:
+                st.info("لا يوجد خريجون مسجلون حتى الآن.")
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء قراءة سجل الخريجين: {e}")
+    else:
+        st.info("سجل الخريجين فارغ حالياً.")
+
+# 6. إدارة المدربين والأدمن وتغيير الباسورد
 elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير الباسورد":
     st.subheader("🔑 إدارة حسابات المدربين (الأدمن)")
     st.markdown("يمكنك هنا إضافة حسابات للمدربين الزملاء معك، أو تغيير كلمة المرور لحسابك الحالي.")
@@ -507,7 +593,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                     with ac1:
                         st.text(f"👤 المدرب: {a_name} | 💻 اسم المستخدم: {a_user}")
                     with ac2:
-                        # منع حذف الحساب الافتراضي أو الحساب الحالي الذي تسجل به منعاً لإغلاق النظام بالخطأ
                         if a_user != "admin" and a_user != st.session_state.get('admin_username', ''):
                             if st.button("🗑️ حذف الحساب", key=f"del_adm_{idx}"):
                                 updated_admins_list = []
@@ -528,7 +613,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
         except Exception as e:
             st.error(f"خطأ في عرض المدربين: {e}")
 
-# 6. نشر الإعلانات
+# 7. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
     st.subheader("📢 نشر إعلان جديد للمتدربين")
     with st.form("announcement_form"):
@@ -556,7 +641,7 @@ elif admin_menu == "📢 نشر الإعلانات والأخبار":
             else:
                 st.warning("الرجاء كتابة العنوان والمحتوى.")
 
-# 7. رفع ملفات المحاضرات
+# 8. رفع ملفات المحاضرات
 elif admin_menu == "📚 رفع ملفات المحاضرات":
     st.subheader("📚 إضافة ملف أو مصدر محاضرة للشبكات")
     with st.form("lecture_form"):
@@ -582,7 +667,7 @@ elif admin_menu == "📚 رفع ملفات المحاضرات":
             else:
                 st.warning("الرجاء إدخال العنوان واختيار الملف.")
 
-# 8. إضافة الواجبات
+# 9. إضافة الواجبات
 elif admin_menu == "📋 إضافة الواجبات والتكاليف":
     st.subheader("📋 تكليف المتدربين بواجب جديد مع تحديد موعد تسليم")
     with st.form("assignment_form"):
@@ -616,7 +701,7 @@ elif admin_menu == "📋 إضافة الواجبات والتكاليف":
             else:
                 st.warning("الرجاء إدخال عنوان الواجب.")
 
-# 9. متابعة حلول المتدربين
+# 10. متابعة حلول المتدربين
 elif admin_menu == "📥 متابعة حلول المتدربين":
     st.subheader("📥 حلول الواجبات المرسلة من المتدربين")
     if os.path.exists(submissions_db):
