@@ -39,7 +39,7 @@ assignments_db = "assignments.csv"
 submissions_db = "submissions.csv"
 attendance_db = "attendance.csv"
 groups_schedule_db = "groups_schedule.csv"
-graduates_db = "graduates.csv"  # ملف سجل خريجي التدريب
+graduates_db = "graduates.csv"
 
 # ضمان وجود ملف المدربين الأساسي بالأعمدة الصحيحة
 if not os.path.exists(admins_db):
@@ -104,7 +104,7 @@ st.sidebar.divider()
 admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
     "📅 جداول مواعيد المجموعات (Groups)",
     "✅ تسجيل حضور وغياب الطلاب",
-    "⭐ تقييم المتدربين",
+    "⭐ تقييم المتدربين وملاحظات التحسين",
     "👥 إدارة المتدربين (عرض، إضافة، حذف)",
     "🎓 خريجي التدريب (سجل الخريجين)",
     "🔑 إدارة المدربين والأدمن وتغيير الباسورد",
@@ -266,9 +266,11 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
         except Exception as e:
             st.error(f"خطأ: {e}")
 
-# 3. تقييم المتدربين
-elif admin_menu == "⭐ تقييم المتدربين":
-    st.subheader("⭐ تقييم الأداء الأكاديمي للمتدربين")
+# 3. تقييم المتدربين وملاحظات التحسين
+elif admin_menu == "⭐ تقييم المتدربين وملاحظات التحسين":
+    st.subheader("⭐ تقييم الأداء الأكاديمي للمتدربين وكتابة الملاحظات الإصلاحية")
+    st.markdown("يمكنك تقييم الطالب وكتابة تعليق تفصيلي يوضح المشكلة أو النقاط التي يجب عليه إصلاحها أو تحسينها.")
+    
     if os.path.exists(users_db):
         try:
             df_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
@@ -286,18 +288,31 @@ elif admin_menu == "⭐ تقييم المتدربين":
                     user_options = df_users.apply(lambda row: f"{row['اسم_المتدرب']} ({row['اسم_المستخدم']})", axis=1).tolist()
                     selected_user_display = st.selectbox("اختر المتدرب:", user_options)
                     
-                    eval_choices = ["⭐ ممتاز جداً", "⭐ ممتاز", "⭐ جيد جداً", "⭐ جيد", "⭐ يحتاج إلى تحسين"]
+                    eval_choices = ["⭐ ممتاز جداً", "⭐ ممتاز", "⭐ جيد جداً", "⭐ جيد", "⭐ يحتاج إلى تحسين عاجل"]
                     chosen_username = selected_user_display.split("(")[-1].replace(")", "").strip()
                     
                     current_user_prof = df_prof[df_prof['اسم_المستخدم'].astype(str).str.strip() == chosen_username]
                     default_eval_val = "⭐ ممتاز"
+                    default_notes_val = ""
                     if not current_user_prof.empty:
                         val_found = str(current_user_prof.iloc[0].get('التقييم', ''))
                         if val_found in eval_choices:
                             default_eval_val = val_found
+                        # قراءة النبذة/الملاحظات الحالية إن وجدت
+                        notes_found = str(current_user_prof.iloc[0].get('نبذة', ''))
+                        if notes_found != "nan":
+                            default_notes_val = notes_found
                     
                     new_evaluation = st.selectbox("التقييم الأكاديمي الجديد:", eval_choices, index=eval_choices.index(default_eval_val) if default_eval_val in eval_choices else 0)
-                    submit_eval = st.form_submit_button("حفظ وتحديث التقييم")
+                    
+                    # خانة الكومنت أو المشكلة التي يجب على الطالب حلها
+                    improvement_comment = st.text_area(
+                        "📝 كومنت / ملاحظات المدرب (تحديد المشكلة أو النقاط التي يجب على الطالب حلها):",
+                        value=default_notes_val,
+                        placeholder="اكتب تفاصيل المشكلة هنا.. (مثال: توجد مشكلة لديك في فهم إعدادات الـ Subnetting أو الـ OSPF يرجى مراجعة محاضرة يوم الإثنين وحلها)"
+                    )
+                    
+                    submit_eval = st.form_submit_button("حفظ وتحديث التقييم والملاحظات")
                     
                     if submit_eval:
                         profiles_list = []
@@ -309,14 +324,15 @@ elif admin_menu == "⭐ تقييم المتدربين":
                         if not current_user_prof.empty:
                             old_avatar = str(current_user_prof.iloc[0].get('الصورة_الشخصية', ''))
                             
-                        profiles_list.append([chosen_username, old_avatar, new_evaluation, ""])
+                        # حفظ التقييم والنبيذ/الكومنت في خانة 'نبذة' أو الملاحظات
+                        profiles_list.append([chosen_username, old_avatar, new_evaluation, improvement_comment.strip()])
                         
                         with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
                             w_p = csv.writer(f_p)
                             w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
                             w_p.writerows(profiles_list)
                         
-                        st.success(f"تم تحديث التقييم بنجاح إلى: ({new_evaluation})")
+                        st.success(f"تم تحديث التقييم والملاحظات الخاصة بالطالب بنجاح!")
             else:
                 st.info("لا يوجد متدربين.")
         except Exception as e:
@@ -503,7 +519,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
 
     col_adm1, col_adm2 = st.columns(2)
 
-    # قسم إضافة مدرب جديد
     with col_adm1:
         st.markdown("### ➕ إضافة أدمن / مدرب جديد")
         with st.form("add_new_admin_form"):
@@ -531,7 +546,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                 else:
                     st.warning("الرجاء ملء جميع الحقول المطلوبة.")
 
-    # قسم تغيير كلمة المرور للحساب الحالي
     with col_adm2:
         st.markdown("### 🔒 تغيير كلمة المرور لحسابك الحالي")
         with st.form("change_admin_password_form"):
@@ -552,7 +566,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                             df_change.columns = df_change.columns.str.strip()
                             current_uname = st.session_state.get('admin_username', '')
                             
-                            # التحقق من صحة الباسورد القديم
                             user_row = df_change[df_change['اسم_المستخدم'].astype(str).str.strip() == current_uname]
                             if not user_row.empty and str(user_row.iloc[0]['كلمة_المرور']).strip() == old_pass_input.strip():
                                 updated_admins = []
@@ -562,7 +575,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                                     uname_full = str(r.get('اسم_المدرب')).strip()
                                     
                                     if uname == current_uname:
-                                        upass = new_pass_input.strip() # تحديث الباسورد
+                                        upass = new_pass_input.strip()
                                     updated_admins.append([uname, upass, uname_full])
                                 
                                 with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_up:
@@ -577,41 +590,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                             st.error(f"حدث خطأ: {e}")
                 else:
                     st.warning("الرجاء تعبئة جميع حقول كلمة المرور.")
-
-    st.markdown("---")
-    st.markdown("### 📋 قائمة المدربين المسجلين في النظام:")
-    if os.path.exists(admins_db):
-        try:
-            df_all_admins = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
-            df_all_admins.columns = df_all_admins.columns.str.strip()
-            if not df_all_admins.empty:
-                for idx, row in df_all_admins.iterrows():
-                    a_name = row.get('اسم_المدرب', '')
-                    a_user = row.get('اسم_المستخدم', '')
-                    
-                    ac1, ac2 = st.columns([3, 1])
-                    with ac1:
-                        st.text(f"👤 المدرب: {a_name} | 💻 اسم المستخدم: {a_user}")
-                    with ac2:
-                        if a_user != "admin" and a_user != st.session_state.get('admin_username', ''):
-                            if st.button("🗑️ حذف الحساب", key=f"del_adm_{idx}"):
-                                updated_admins_list = []
-                                for _, r in df_all_admins.iterrows():
-                                    if str(r.get('اسم_المستخدم')).strip() != str(a_user).strip():
-                                        updated_admins_list.append([r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('اسم_المدرب')])
-                                
-                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_aout:
-                                    w_aout = csv.writer(f_aout)
-                                    w_aout.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
-                                    w_aout.writerows(updated_admins_list)
-                                
-                                st.success(f"تم حذف حساب المدرب ({a_name}) بنجاح!")
-                                st.rerun()
-                        else:
-                            st.caption("الحساب الأساسي (محمي)")
-                    st.write("---")
-        except Exception as e:
-            st.error(f"خطأ في عرض المدربين: {e}")
 
 # 7. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
