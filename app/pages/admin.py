@@ -197,13 +197,12 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
     else:
         st.info("لا توجد جداول مجموعات مسجلة.")
 
-# 2. تسجيل حضور وغياب الطلاب حسب الجروب المختار
+# 2. تسجيل حضور وغياب الطلاب حسب الجروب المختار حصراً
 elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
     st.subheader("✅ تسجيل ومتابعة حضور وغياب المتدربين (حسب الجروب)")
     
-    # التأكد من وجود مجموعات مسجلة
     if not os.path.exists(groups_schedule_db):
-        st.warning("⚠️ يرجى أولاً إضافة مجموعات ومواعيد من قسم (جداول مواعيد المجموعات) لكي تتمكن من اختيار الجروب هنا.")
+        st.warning("⚠️ يرجى أولاً إضافة مجموعات من قسم (جداول مواعيد المجموعات).")
     else:
         try:
             df_sched = pd.read_csv(groups_schedule_db, encoding="utf-8-sig", on_bad_lines="skip")
@@ -220,15 +219,30 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
                     df_users.columns = df_users.columns.str.strip()
                     
                     if not df_users.empty:
+                        # تصفية الطلاب بحيث يظهر فقط طلاب المسار أو الجروب المختار (إذا كان اسم الجروب يتطابق مع المسار أو يحتوي عليه، أو يمكنك مطابقتهم)
+                        # لضمان الدقة، سنقوم بتصفية الطلاب الذين يطابق مسارهم أو اسمهم الجروب، أو سنعرض اختياراً للفلترة.
+                        # كحل مثالي: نقوم بعمل فلتر أو إظهار طلاب المسار المرتبط باسم الجروب، أو البحث عن جزء مشترك.
+                        # للأمان التام: سنقوم بعرض الطلاب الذين يتطابق المسار لديهم مع اسم الجروب المختار أو سنعرض قائمة منسدلة لاختيار طلاب الجروب.
+                        
+                        # فلترة الطلاب بناءً على تطابق اسم الجروب مع المسار أو الاسم
+                        df_group_users = df_users[
+                            df_users['المسار'].astype(str).str.strip().str.lower().str.contains(selected_group.lower()) |
+                            df_users['اسم_المتدرب'].astype(str).str.strip().str.lower().str.contains(selected_group.lower())
+                        ]
+                        
+                        # إذا لم يطابق أي طالب النص بدقة، نيح للأدمن اختيار الطلاب يدوياً أو نعرضهم جميعاً كخيار احتياطي، ولكن الأصح هنا تصفيتهم:
+                        if df_group_users.empty:
+                            st.info(f"ℹ️ لا يوجد طلاب مسجلون بمسار يطابق '{selected_group}' تماماً. يمكنك اختيار الطلاب من القائمة أدناه أو ربطهم:")
+                            df_group_users = df_users  # في حال عدم التطابق الحرفي يظهر الكل مؤقتاً لتجنب فراغ القائمة
+                        
                         with st.form("attendance_form"):
                             att_date = st.date_input("تاريخ المحاضرة:")
                             lecture_title_input = st.text_input("عنوان المحاضرة أو الدرس:", "محاضرة اليوم")
                             
-                            st.markdown(f"### طلاب جروب: {selected_group}")
+                            st.markdown(f"### طلاب جروب: {selected_group} ({len(df_group_users)} طالب)")
                             attendance_status = {}
                             
-                            # لو حابب تظهر كل الطلاب أو ممكن تخصصهم بناءً على المسار المرتبط بالجروب
-                            for idx, row in df_users.iterrows():
+                            for idx, row in df_group_users.iterrows():
                                 u_name = row.get('اسم_المتدرب', 'طالب')
                                 u_user = row.get('اسم_المستخدم', '')
                                 u_track = row.get('المسار', '')
@@ -250,6 +264,9 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
                                     for _, r in df_att_old.iterrows():
                                         att_records.append([r.get('التاريخ'), r.get('الجروب'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
                                 
+                                # حذف أي سجل قديم لنفس الجروب ونفس التاريخ لنقاط الحضور المحدثة
+                                att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[1]).strip() == str(selected_group).strip())]
+
                                 for u_usr, data in attendance_status.items():
                                     att_records.append([str(att_date), data["group"], lecture_title_input.strip(), data["name"], u_usr, data["status"]])
                                 
