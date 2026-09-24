@@ -45,7 +45,7 @@ if not os.path.exists(admins_db):
     with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
-        w.writerow(["admin", "admin123", "الأدمن الأساسي"])
+        w.writerow(["admin", "admin123", "فارس وائل"])
 
 # نظام تسجيل دخول الأدمن
 if 'admin_logged_in' not in st.session_state:
@@ -105,7 +105,7 @@ admin_menu = st.sidebar.radio("خيارات لوحة التحكم:", [
     "✅ تسجيل حضور وغياب الطلاب",
     "⭐ تقييم المتدربين",
     "👥 إدارة المتدربين (عرض، إضافة، حذف)",
-    "🔑 إدارة المدربين والأدمن",
+    "🔑 إدارة المدربين والأدمن وتغيير الباسورد",
     "📢 نشر الإعلانات والأخبار",
     "📚 رفع ملفات المحاضرات",
     "📋 إضافة الواجبات والتكاليف",
@@ -409,17 +409,124 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
     else:
         st.info("لا توجد بيانات طلاب.")
 
-# 5. إدارة المدربين والأدمن
-elif admin_menu == "🔑 إدارة المدربين والأدمن":
-    st.subheader("🔑 إدارة حسابات المدربين والأدمن")
+# 5. إدارة المدربين والأدمن وتغيير الباسورد
+elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير الباسورد":
+    st.subheader("🔑 إدارة حسابات المدربين (الأدمن)")
+    st.markdown("يمكنك هنا إضافة حسابات للمدربين الزملاء معك، أو تغيير كلمة المرور لحسابك الحالي.")
+    st.divider()
+
+    col_adm1, col_adm2 = st.columns(2)
+
+    # قسم إضافة مدرب جديد
+    with col_adm1:
+        st.markdown("### ➕ إضافة أدمن / مدرب جديد")
+        with st.form("add_new_admin_form"):
+            new_adm_name = st.text_input("اسم المدرب الرباعي/الكامل:")
+            new_adm_user = st.text_input("اسم المستخدم لتسجيل الدخول (Username):")
+            new_adm_pass = st.text_input("كلمة المرور:", type="password")
+            
+            submit_new_admin = st.form_submit_button("إضافة حساب المدرب")
+            
+            if submit_new_admin:
+                if new_adm_name and new_adm_user and new_adm_pass:
+                    try:
+                        df_adm_check = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
+                        df_adm_check.columns = df_adm_check.columns.str.strip()
+                        
+                        if new_adm_user.strip() in df_adm_check['اسم_المستخدم'].astype(str).str.strip().values:
+                            st.error("خطأ: اسم المستخدم هذا موجود بالفعل، اختر اسماً آخر.")
+                        else:
+                            with open(admins_db, mode="a", encoding="utf-8-sig", newline="") as f_add:
+                                w_add = csv.writer(f_add)
+                                w_add.writerow([new_adm_user.strip(), new_adm_pass.strip(), new_adm_name.strip()])
+                            st.success(f"تم إضافة حساب المدرب ({new_adm_name}) بنجاح!")
+                    except Exception as e:
+                        st.error(f"حدث خطأ: {e}")
+                else:
+                    st.warning("الرجاء ملء جميع الحقول المطلوبة.")
+
+    # قسم تغيير كلمة المرور للحساب الحالي
+    with col_adm2:
+        st.markdown("### 🔒 تغيير كلمة المرور لحسابك الحالي")
+        with st.form("change_admin_password_form"):
+            st.info(f"الحساب الحالي: {st.session_state.get('admin_name', '')} ({st.session_state.get('admin_username', '')})")
+            old_pass_input = st.text_input("كلمة المرور الحالية:", type="password")
+            new_pass_input = st.text_input("كلمة المرور الجديدة:", type="password")
+            confirm_pass_input = st.text_input("تأكيد كلمة المرور الجديدة:", type="password")
+            
+            submit_change_pass = st.form_submit_button("تحديث كلمة المرور")
+            
+            if submit_change_pass:
+                if old_pass_input and new_pass_input and confirm_pass_input:
+                    if new_pass_input != confirm_pass_input:
+                        st.error("خطأ: كلمة المرور الجديدة غير متطابقة في الحقلين.")
+                    else:
+                        try:
+                            df_change = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
+                            df_change.columns = df_change.columns.str.strip()
+                            current_uname = st.session_state.get('admin_username', '')
+                            
+                            # التحقق من صحة الباسورد القديم
+                            user_row = df_change[df_change['اسم_المستخدم'].astype(str).str.strip() == current_uname]
+                            if not user_row.empty and str(user_row.iloc[0]['كلمة_المرور']).strip() == old_pass_input.strip():
+                                updated_admins = []
+                                for _, r in df_change.iterrows():
+                                    uname = str(r.get('اسم_المستخدم')).strip()
+                                    upass = str(r.get('كلمة_المرور')).strip()
+                                    uname_full = str(r.get('اسم_المدرب')).strip()
+                                    
+                                    if uname == current_uname:
+                                        upass = new_pass_input.strip() # تحديث الباسورد
+                                    updated_admins.append([uname, upass, uname_full])
+                                
+                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_up:
+                                    w_up = csv.writer(f_up)
+                                    w_up.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
+                                    w_up.writerows(updated_admins)
+                                    
+                                st.success("تم تغيير كلمة المرور بنجاح! يرجى إعادة تسجيل الدخول لتطبيق التغيير.")
+                            else:
+                                st.error("خطأ: كلمة المرور الحالية غير صحيحة.")
+                        except Exception as e:
+                            st.error(f"حدث خطأ: {e}")
+                else:
+                    st.warning("الرجاء تعبئة جميع حقول كلمة المرور.")
+
+    st.markdown("---")
+    st.markdown("### 📋 قائمة المدربين المسجلين في النظام:")
     if os.path.exists(admins_db):
         try:
             df_all_admins = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
             df_all_admins.columns = df_all_admins.columns.str.strip()
-            for idx, row in df_all_admins.iterrows():
-                st.text(f"👤 المدرب: {row.get('اسم_المدرب')} (اليوزر: {row.get('اسم_المستخدم')})")
+            if not df_all_admins.empty:
+                for idx, row in df_all_admins.iterrows():
+                    a_name = row.get('اسم_المدرب', '')
+                    a_user = row.get('اسم_المستخدم', '')
+                    
+                    ac1, ac2 = st.columns([3, 1])
+                    with ac1:
+                        st.text(f"👤 المدرب: {a_name} | 💻 اسم المستخدم: {a_user}")
+                    with ac2:
+                        # منع حذف الحساب الافتراضي أو الحساب الحالي الذي تسجل به منعاً لإغلاق النظام بالخطأ
+                        if a_user != "admin" and a_user != st.session_state.get('admin_username', ''):
+                            if st.button("🗑️ حذف الحساب", key=f"del_adm_{idx}"):
+                                updated_admins_list = []
+                                for _, r in df_all_admins.iterrows():
+                                    if str(r.get('اسم_المستخدم')).strip() != str(a_user).strip():
+                                        updated_admins_list.append([r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('اسم_المدرب')])
+                                
+                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_aout:
+                                    w_aout = csv.writer(f_aout)
+                                    w_aout.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
+                                    w_aout.writerows(updated_admins_list)
+                                
+                                st.success(f"تم حذف حساب المدرب ({a_name}) بنجاح!")
+                                st.rerun()
+                        else:
+                            st.caption("الحساب الأساسي (محمي)")
+                    st.write("---")
         except Exception as e:
-            st.error(f"خطأ: {e}")
+            st.error(f"خطأ في عرض المدربين: {e}")
 
 # 6. نشر الإعلانات
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
