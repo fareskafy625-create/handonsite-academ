@@ -7,10 +7,10 @@ from datetime import datetime
 # إعدادات صفحة الأدمن
 st.set_page_config(page_title="تسجيل دخول الأدمن - أكاديمية HandsOnSite", page_icon="👨‍💻", layout="wide")
 
-# تصميم CSS مخصص لتجميل شكل لوحة التحكم
+# تصميم CSS مخصص لتجميل شكل لوحة التحكم والخلفية الشفافة الزجاجية
 st.markdown("""
     <style>
-    .main { background-color: #f4f6f9; }
+    .main { background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(244, 246, 249, 0.85) 100%); }
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -58,7 +58,7 @@ if not st.session_state.admin_logged_in:
     
     with col2:
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.8); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
                 <h2 style="color: #0d6efd; margin-bottom: 5px;">👨‍💻 لوحة تحكم المدربين</h2>
                 <p style="color: #6c757d; font-size: 15px;">أكاديمية HandsOnSite - تسجيل دخول الأدمن</p>
             </div>
@@ -128,7 +128,7 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
     st.markdown("قم بإنشاء جدول أو مواعيد خاصة بكل مجموعة من مجموعات الشبكات والـ IT.")
     st.divider()
 
-    with st.form("group_schedule_form"):
+    with st.form("group_schedule_form", clear_on_submit=True):
         group_name = st.text_input("اسم الجروب (مثال: جروب الشبكات A - صباحي):")
         session_day = st.selectbox("اليوم:", ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"])
         session_time = st.text_input("موعد المحاضرة (مثال: من 4 لـ 6 عصراً):")
@@ -337,7 +337,7 @@ elif admin_menu == "⭐ تقييم المتدربين وملاحظات التح�
     else:
         st.warning("لا توجد بيانات مستخدمين.")
 
-# 4. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب)
+# 4. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب) مع تفريغ الحقول تلقائياً
 elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، حذف)":
     st.subheader("👥 إدارة الطلاب المتدربين")
     
@@ -364,14 +364,15 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
         
     st.divider()
     
-    with st.expander("➕ إضافة طالب متدرب جديد"):
-        with st.form("add_user_form"):
+    with st.expander("➕ إضافة طالب متدرب جديد", expanded=True):
+        # استخدام clear_on_submit=True لتفريغ الخانات تلقائياً بعد الحفظ لإضافة الطالب التالي مباشرة
+        with st.form("add_user_form", clear_on_submit=True):
             trainee_name = st.text_input("اسم المتدرب الكامل:")
             trainee_username = st.text_input("اسم المستخدم (Username):")
             trainee_password = st.text_input("كلمة المرور:", type="password")
             trainee_track = st.selectbox("المسار التدريبي:", ["Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security"])
             
-            submit_user = st.form_submit_button("إضافة الطالب")
+            submit_user = st.form_submit_button("إضافة الطالب وتفريغ الخانات")
             
             if submit_user:
                 if trainee_name and trainee_username and trainee_password:
@@ -381,8 +382,8 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
                         if not file_exists:
                             w.writerow(["اسم_المتدرب", "اسم_المستخدم", "كلمة_المرور", "المسار"])
                         w.writerow([trainee_name.strip(), trainee_username.strip(), trainee_password.strip(), trainee_track])
-                    st.success(f"تم إضافة الطالب ({trainee_name}) بنجاح!")
-                    st.rerun()
+                    
+                    st.success(f"✅ تم إضافة الطالب ({trainee_name}) بنجاح! الخانات جاهزة لإضافة الطالب التالي.")
                 else:
                     st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
                     
@@ -430,7 +431,7 @@ elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
     st.markdown("يمكنك إضافة اسم الخريج/المدرب، رقم التليفون، والتقييم النهائي بنهاية التدريب.")
     st.divider()
 
-    with st.form("add_graduate_form"):
+    with st.form("add_graduate_form", clear_on_submit=True):
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             grad_name = st.text_input("اسم الخريج / المتدرب بالكامل:")
@@ -518,7 +519,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
 
     with col_adm1:
         st.markdown("### ➕ إضافة أدمن / مدرب جديد")
-        with st.form("add_new_admin_form"):
+        with st.form("add_new_admin_form", clear_on_submit=True):
             new_adm_name = st.text_input("اسم المدرب الرباعي/الكامل:")
             new_adm_user = st.text_input("اسم المستخدم لتسجيل الدخول (Username):")
             new_adm_pass = st.text_input("كلمة المرور:", type="password")
@@ -545,7 +546,7 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
 
     with col_adm2:
         st.markdown("### 🔒 تغيير كلمة المرور لحسابك الحالي")
-        with st.form("change_admin_password_form"):
+        with st.form("change_admin_password_form", clear_on_submit=True):
             st.info(f"الحساب الحالي: {st.session_state.get('admin_name', '')} ({st.session_state.get('admin_username', '')})")
             old_pass_input = st.text_input("كلمة المرور الحالية:", type="password")
             new_pass_input = st.text_input("كلمة المرور الجديدة:", type="password")
@@ -617,131 +618,249 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                                 
                                 st.success(f"تم حذف حساب المدرب ({a_name}) بنجاح!")
                                 st.rerun()
-                        else:
-                            st.caption("الحساب الأساسي (محمي)")
-                    st.write("---")
         except Exception as e:
-            st.error(f"خطأ في عرض المدربين: {e}")
+            st.error(f"خطأ: {e}")
 
-# 7. نشر الإعلانات
+# 7. نشر الإعلانات والأخبار
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
-    st.subheader("📢 نشر إعلان جديد للمتدربين")
-    with st.form("announcement_form"):
-        title = st.text_input("عنوان الإعلان:")
-        content = st.text_area("محتوى الإعلان والتفاصيل:")
-        img_file = st.file_uploader("صورة مرفقة (اختياري):", type=["png", "jpg", "jpeg"])
-        submit_ann = st.form_submit_button("نشر الإعلان")
+    st.subheader("📢 نشر إعلان أو خبر جديد للمتدربين")
+    with st.form("announcement_form", clear_on_submit=True):
+        ann_title = st.text_input("عنوان الإعلان:")
+        ann_content = st.text_area("محتوى الإعلان:")
+        ann_img = st.file_uploader("صورة مرفقة للإعلان (اختياري):", type=["jpg", "jpeg", "png"])
+        
+        submit_ann = st.form_submit_button("نشر الإعلان الآن")
         
         if submit_ann:
-            if title and content:
-                img_path = ""
-                if img_file is not None:
-                    img_filename = f"ann_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{img_file.name}"
-                    img_path = os.path.join("uploads", img_filename)
-                    with open(img_path, "wb") as f:
-                        f.write(img_file.getbuffer())
+            if ann_title and ann_content:
+                img_path_str = ""
+                if ann_img is not None:
+                    img_filename = f"ann_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{ann_img.name}"
+                    img_path_str = os.path.join("uploads", img_filename)
+                    with open(img_path_str, "wb") as imf:
+                        imf.write(ann_img.getbuffer())
                 
-                file_exists = os.path.exists(announcements_db)
-                with open(announcements_db, mode="a", encoding="utf-8-sig", newline="") as f:
-                    w = csv.writer(f)
-                    if not file_exists:
-                        w.writerow(["العنوان", "المحتوى", "صورة_الإعلان", "التاريخ"])
-                    w.writerow([title, content, img_path, datetime.now().strftime("%Y-%m-%d")])
-                st.success("تم نشر الإعلان بنجاح!")
+                ann_records = []
+                if os.path.exists(announcements_db):
+                    df_old_ann = pd.read_csv(announcements_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    df_old_ann.columns = df_old_ann.columns.str.strip()
+                    for _, r in df_old_ann.iterrows():
+                        ann_records.append([r.get('العنوان'), r.get('المحتوى'), r.get('صورة_الإعلان'), r.get('التاريخ')])
+                
+                ann_records.append([ann_title.strip(), ann_content.strip(), img_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                
+                with open(announcements_db, mode="w", encoding="utf-8-sig", newline="") as f_an:
+                    w_an = csv.writer(f_an)
+                    w_an.writerow(["العنوان", "المحتوى", "صورة_الإعلان", "التاريخ"])
+                    w_an.writerows(ann_records)
+                
+                st.success("تم نشر الإعلان بنجاح لجميع المتدربين!")
             else:
-                st.warning("الرجاء كتابة العنوان والمحتوى.")
+                st.warning("الرجاء إدخال عنوان ومحتوى الإعلان على الأقل.")
+
+    st.markdown("---")
+    st.subheader("📋 الإعلانات النشطة الحالية:")
+    if os.path.exists(announcements_db):
+        try:
+            df_curr_ann = pd.read_csv(announcements_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_curr_ann.columns = df_curr_ann.columns.str.strip()
+            if not df_curr_ann.empty:
+                for idx, row in df_curr_ann.iterrows():
+                    st.info(f"### 📌 {row.get('العنوان', '')}\n\n{row.get('المحتوى', '')}\n\n*تاريخ النشر: {row.get('التاريخ', '')}*")
+                    if pd.notna(row.get('صورة_الإعلان')) and os.path.exists(str(row.get('صورة_الإعلان'))):
+                        st.image(row.get('صورة_الإعلان'), width=300)
+                    if st.button("🗑️ حذف هذا الإعلان", key=f"del_ann_{idx}"):
+                        updated_anns = []
+                        for _, r in df_curr_ann.iterrows():
+                            if str(r.get('العنوان')).strip() != str(row.get('العنوان')).strip():
+                                updated_anns.append([r.get('العنوان'), r.get('المحتوى'), r.get('صورة_الإعلان'), r.get('التاريخ')])
+                        with open(announcements_db, mode="w", encoding="utf-8-sig", newline="") as f_aout:
+                            w_aout = csv.writer(f_aout)
+                            w_aout.writerow(["العنوان", "المحتوى", "صورة_الإعلان", "التاريخ"])
+                            w_aout.writerows(updated_anns)
+                        st.success("تم حذف الإعلان بنجاح!")
+                        st.rerun()
+                    st.write("---")
+            else:
+                st.info("لا توجد إعلانات نشطة.")
+        except Exception as e:
+            st.error(f"خطأ: {e}")
 
 # 8. رفع ملفات المحاضرات
 elif admin_menu == "📚 رفع ملفات المحاضرات":
-    st.subheader("📚 إضافة ملف أو مصدر محاضرة للشبكات")
-    with st.form("lecture_form"):
-        track = st.selectbox("المسار المستهدف:", ["الكل", "Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security"])
-        lec_title = st.text_input("عنوان المحاضرة أو الدرس:")
-        lec_file = st.file_uploader("ملف المحاضرة (PDF / Packet Tracer / Code):", type=["pdf", "zip", "rar", "pkt", "txt", "docx"])
-        submit_lec = st.form_submit_button("رفع الملف")
+    st.subheader("📚 رفع ملفات ومصادر المحاضرات للمتدربين")
+    with st.form("lecture_upload_form", clear_on_submit=True):
+        lec_track = st.selectbox("المسار المستهدف:", ["Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security"])
+        lec_title = st.text_input("عنوان المحاضرة أو الشرح:")
+        lec_file = st.file_uploader("اختر ملف الشرح (PDF / ZIP / TXT):", type=["pdf", "zip", "rar", "txt", "pptx"])
+        
+        submit_lec = st.form_submit_button("رفع ملف المحاضرة")
         
         if submit_lec:
             if lec_title and lec_file is not None:
-                file_name = f"lec_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{lec_file.name}"
-                file_path = os.path.join("uploads", file_name)
-                with open(file_path, "wb") as f:
-                    f.write(lec_file.getbuffer())
+                lec_filename = f"lec_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{lec_file.name}"
+                lec_path_str = os.path.join("uploads", lec_filename)
+                with open(lec_path_str, "wb") as lf:
+                    lf.write(lec_file.getbuffer())
                 
-                file_exists = os.path.exists(lectures_db)
-                with open(lectures_db, mode="a", encoding="utf-8-sig", newline="") as f:
-                    w = csv.writer(f)
-                    if not file_exists:
-                        w.writerow(["المسار", "عنوان_المحاضرة", "مسار_الملف", "التاريخ"])
-                    w.writerow([track, lec_title, file_path, datetime.now().strftime("%Y-%m-%d")])
-                st.success("تم رفع ملف المحاضرة بنجاح!")
+                lec_records = []
+                if os.path.exists(lectures_db):
+                    df_old_lec = pd.read_csv(lectures_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    df_old_lec.columns = df_old_lec.columns.str.strip()
+                    for _, r in df_old_lec.iterrows():
+                        lec_records.append([r.get('المسار'), r.get('عنوان_المحاضرة'), r.get('مسار_الملف'), r.get('التاريخ')])
+                
+                lec_records.append([lec_track, lec_title.strip(), lec_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                
+                with open(lectures_db, mode="w", encoding="utf-8-sig", newline="") as f_lc:
+                    w_lc = csv.writer(f_lc)
+                    w_lc.writerow(["المسار", "عنوان_المحاضرة", "مسار_الملف", "التاريخ"])
+                    w_lc.writerows(lec_records)
+                
+                st.success("تم رفع ملف المحاضرة بنجاح لجميع طلاب المسار!")
             else:
-                st.warning("الرجاء إدخال العنوان واختيار الملف.")
+                st.warning("الرجاء إدخال عنوان المحاضرة واختيار الملف.")
 
-# 9. إضافة الواجبات (تم إلغاء خانة الوصف وإظهار حالة رفع الملف بوضوح)
+    st.markdown("---")
+    st.subheader("📋 المحاضرات والملفات المرفوعة:")
+    if os.path.exists(lectures_db):
+        try:
+            df_curr_lec = pd.read_csv(lectures_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_curr_lec.columns = df_curr_lec.columns.str.strip()
+            if not df_curr_lec.empty:
+                for idx, row in df_curr_lec.iterrows():
+                    st.write(f"- **المسار:** {row.get('المسار')} | **المحاضرة:** {row.get('عنوان_المحاضرة')} | *تاريخ الرفع: {row.get('التاريخ')}*")
+                    if st.button("🗑️ حذف هذا الملف", key=f"del_lec_{idx}"):
+                        updated_lecs = []
+                        for _, r in df_curr_lec.iterrows():
+                            if str(r.get('عنوان_المحاضرة')).strip() != str(row.get('عنوان_المحاضرة')).strip():
+                                updated_lecs.append([r.get('المسار'), r.get('عنوان_المحاضرة'), r.get('مسار_الملف'), r.get('التاريخ')])
+                        with open(lectures_db, mode="w", encoding="utf-8-sig", newline="") as f_lout:
+                            w_lout = csv.writer(f_lout)
+                            w_lout.writerow(["المسار", "عنوان_المحاضرة", "مسار_الملف", "التاريخ"])
+                            w_lout.writerows(updated_lecs)
+                        st.success("تم حذف الملف بنجاح!")
+                        st.rerun()
+                    st.write("---")
+            else:
+                st.info("لا توجد ملفات محاضرات مرفوعة.")
+        except Exception as e:
+            st.error(f"خطأ: {e}")
+
+# 9. إضافة الواجبات والتكاليف (Assignments)
 elif admin_menu == "📋 إضافة الواجبات والتكاليف":
-    st.subheader("📋 تكليف المتدربين بواجب جديد مع تحديد موعد تسليم")
-    
-    with st.form("assignment_form"):
-        asg_title = st.text_input("عنوان الواجب (مثال: واجب تكوين الـ OSPF):")
+    st.subheader("📋 نشر Assignment (واجب أو تكليف جديد للمتدربين)")
+    with st.form("assignment_upload_form", clear_on_submit=True):
+        asg_title = st.text_input("عنوان الـ Assignment:")
+        asg_deadline = st.text_input("الموعد النهائي للتسليم (Deadline - مثال: الخميس القادم 11 مساءً):")
+        asg_file = st.file_uploader("رفـع ملف أسئلة الـ Assignment (PDF أو صور):", type=["pdf", "png", "jpg", "zip", "txt"])
         
-        col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            asg_deadline_date = st.date_input("تاريخ آخر موعد للتسليم:")
-        with col_d2:
-            asg_deadline_time = st.time_input("وقت آخر موعد للتسليم:")
-            
-        st.markdown("---")
-        st.markdown("📁 **ملف الأسئلة الخاص بالواجب:**")
-        asg_file = st.file_uploader("اختر ملف الأسئلة (PDF / Word):", type=["pdf", "docx"])
-        
-        # مؤشر مرئي وواضح يوضح حالة الأسيمنت
-        if asg_file is not None:
-            st.success(f"✔️ تم اختيار ملف الأسئلة بنجاح: **{asg_file.name}** (جاهز للنشر)")
-        else:
-            st.info("ℹ️ لم تقم برفع ملف بعد، يمكنك رفع ملف الأسئلة أو نشر الواجب بالعنوان والموعد مباشرة.")
-
-        submit_asg = st.form_submit_button("نشر الواجب للمتدربين")
+        submit_asg = st.form_submit_button("نشر الـ Assignment للمتدربين")
         
         if submit_asg:
             if asg_title:
-                deadline_str = f"{asg_deadline_date} {asg_deadline_time.strftime('%H:%M')}"
-                file_path = ""
+                asg_path_str = ""
                 if asg_file is not None:
-                    file_name = f"asg_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{asg_file.name}"
-                    file_path = os.path.join("uploads", file_name)
-                    with open(file_path, "wb") as f:
-                        f.write(asg_file.getbuffer())
+                    asg_filename = f"asg_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{asg_file.name}"
+                    asg_path_str = os.path.join("uploads", asg_filename)
+                    with open(asg_path_str, "wb") as af:
+                        af.write(asg_file.getbuffer())
                 
-                file_exists = os.path.exists(assignments_db)
-                with open(assignments_db, mode="a", encoding="utf-8-sig", newline="") as f:
-                    w = csv.writer(f)
-                    if not file_exists:
-                        # تم الاستغناء عن عمود الوصف وإبقائه فارغاً أو مخصصاً لملف الأسئلة
-                        w.writerow(["العنوان", "مسار_ملف_الأسئلة", "الديدلاين", "التاريخ"])
-                    w.writerow([asg_title.strip(), file_path, deadline_str, datetime.now().strftime("%Y-%m-%d")])
+                asg_records = []
+                if os.path.exists(assignments_db):
+                    df_old_asg = pd.read_csv(assignments_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    df_old_asg.columns = df_old_asg.columns.str.strip()
+                    for _, r in df_old_asg.iterrows():
+                        asg_records.append([r.get('العنوان'), r.get('الديدلاين'), r.get('مسار_ملف_الأسئلة'), r.get('التاريخ')])
                 
-                st.success(f"تم نشر الواجب ({asg_title}) بنجاح للمتدربين!")
+                asg_records.append([asg_title.strip(), asg_deadline.strip(), asg_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                
+                with open(assignments_db, mode="w", encoding="utf-8-sig", newline="") as f_as:
+                    w_as = csv.writer(f_as)
+                    w_as.writerow(["العنوان", "الديدلاين", "مسار_ملف_الأسئلة", "التاريخ"])
+                    w_as.writerows(asg_records)
+                
+                st.success("تم نشر الـ Assignment بنجاح لجميع المتدربين في بواباتهم!")
             else:
-                st.warning("الرجاء إدخال عنوان الواجب على الأقل.")
+                st.warning("الرجاء إدخال عنوان الـ Assignment على الأقل.")
+
+    st.markdown("---")
+    st.subheader("📋 الـ Assignments المنشورة حالياً:")
+    if os.path.exists(assignments_db):
+        try:
+            df_curr_asg = pd.read_csv(assignments_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_curr_asg.columns = df_curr_asg.columns.str.strip()
+            if not df_curr_asg.empty:
+                for idx, row in df_curr_asg.iterrows():
+                    st.write(f"- **Assignment:** {row.get('العنوان')} | **الموعد النهائي:** {row.get('الديدلاين')} | *تاريخ النشر: {row.get('التاريخ')}*")
+                    if st.button("🗑️ حذف هذا الـ Assignment", key=f"del_asg_{idx}"):
+                        updated_asgs = []
+                        for _, r in df_curr_asg.iterrows():
+                            if str(r.get('العنوان')).strip() != str(row.get('العنوان')).strip():
+                                updated_asgs.append([r.get('العنوان'), r.get('الديدلاين'), r.get('مسار_ملف_الأسئلة'), r.get('التاريخ')])
+                        with open(assignments_db, mode="w", encoding="utf-8-sig", newline="") as f_asout:
+                            w_asout = csv.writer(f_asout)
+                            w_asout.writerow(["العنوان", "الديدلاين", "مسار_ملف_الأسئلة", "التاريخ"])
+                            w_asout.writerows(updated_asgs)
+                        st.success("تم حذف الـ Assignment بنجاح!")
+                        st.rerun()
+                    st.write("---")
+            else:
+                st.info("لا توجد Assignments منشورة حالياً.")
+        except Exception as e:
+            st.error(f"خطأ: {e}")
 
 # 10. متابعة حلول المتدربين
 elif admin_menu == "📥 متابعة حلول المتدربين":
-    st.subheader("📥 حلول الواجبات المرسلة من المتدربين")
+    st.subheader("📥 متابعة حلول الـ Assignments المرفوعة من المتدربين")
+    st.markdown("استعرض هنا حلول الواجبات التي قام المتدربين برفعها مع إمكانية تحميلها ومراجعتها.")
+    st.divider()
+
     if os.path.exists(submissions_db):
         try:
             df_subs = pd.read_csv(submissions_db, encoding="utf-8-sig", on_bad_lines="skip")
             df_subs.columns = df_subs.columns.str.strip()
             if not df_subs.empty:
-                for index, row in df_subs.iterrows():
-                    st.write(f"👤 **المتدرب:** {row.get('اسم_المتدرب')} | 📋 **الواجب:** {row.get('عنوان_الواجب')}")
-                    sub_file = row.get('مسار_ملف_الحل')
+                for idx, row in df_subs.iterrows():
+                    t_name = row.get('اسم_المتدرب', '')
+                    t_user = row.get('اسم_المستخدم', '')
+                    asg_title = row.get('عنوان_الواجب', '')
+                    sub_file = row.get('مسار_ملف_الحل', '')
+                    sub_date = row.get('التاريخ', '')
+
+                    st.markdown(f"""
+                        <div style="background-color: white; padding: 15px; border-radius: 8px; border-right: 4px solid #198754; margin-bottom: 10px;">
+                            <h4 style="color: #198754; margin-top: 0;">👤 المتدرب: {t_name} ({t_user})</h4>
+                            <p><b>Assignment:</b> {asg_title} | <b>تاريخ الرفع:</b> {sub_date}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
                     if pd.notna(sub_file) and isinstance(sub_file, str) and os.path.exists(sub_file):
                         with open(sub_file, "rb") as sf:
-                            st.download_button(label="📥 تحميل حل المتدرب", data=sf, file_name=os.path.basename(sub_file), key=f"dl_sub_{index}")
+                            st.download_button(
+                                label=f"📥 تحميل حل الـ Assignment ({os.path.basename(sub_file)})",
+                                data=sf,
+                                file_name=os.path.basename(sub_file),
+                                key=f"dl_sub_{idx}"
+                            )
+                    else:
+                        st.warning("ملف الحل غير موجود على الخادم.")
+
+                    if st.button("🗑️ حذف هذا التسليم", key=f"del_sub_{idx}"):
+                        updated_subs = []
+                        for _, r in df_subs.iterrows():
+                            if not (str(r.get('اسم_المستخدم')).strip() == str(t_user).strip() and str(r.get('عنوان_الواجب')).strip() == str(asg_title).strip()):
+                                updated_subs.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('عنوان_الواجب'), r.get('مسار_ملف_الحل'), r.get('التاريخ')])
+                        with open(submissions_db, mode="w", encoding="utf-8-sig", newline="") as f_sout:
+                            w_sout = csv.writer(f_sout)
+                            w_sout.writerow(["اسم_المتدرب", "اسم_المستخدم", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
+                            w_sout.writerows(updated_subs)
+                        st.success("تم حذف التسليم بنجاح!")
+                        st.rerun()
                     st.write("---")
             else:
-                st.info("لا توجد حلول مرفوعة.")
+                st.info("لا توجد حلول مرفوعة من المتدربين حتى الآن.")
         except Exception as e:
-            st.error(f"خطأ: {e}")
+            st.error(f"حدث خطأ أثناء قراءة الحلول: {e}")
     else:
-        st.info("لا توجد حلول مسجلة.")
+        st.info("لا توجد تسليمات مسجلة حتى الآن.")
