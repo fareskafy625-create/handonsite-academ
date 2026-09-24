@@ -7,27 +7,30 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="بوابة المتدرب - أكاديمية HandsOnSite", page_icon="💻", layout="wide")
 
-# تصميم CSS مخصص لتجميل شكل الموقع وصفحة الدخول بالكامل
+# تصميم CSS مخصص لتصغير وتجميل بطاقات الـ Assignments لتكون مدمجة وموفرة للمساحة
 st.markdown("""
     <style>
     .main { background-color: #f4f6f9; }
     
-    /* تصميم صندوق تسجيل الدخول ليكون في المنتصف وبشكل أنيق */
-    .login-container {
-        max-width: 420px;
-        margin: 50px auto;
-        padding: 30px;
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    /* تنسيق بطاقة الـ Assignment لتكون مضغوطة وأنيقة */
+    .assignment-card-compact {
+        background-color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        border-right: 4px solid #0d6efd;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     /* تنسيق الأزرار */
     .stButton>button {
         width: 100%;
-        border-radius: 8px;
+        border-radius: 6px;
         font-weight: bold;
-        height: 45px;
+        height: 38px;
         background-color: #0d6efd;
         color: white;
         transition: 0.3s;
@@ -35,14 +38,6 @@ st.markdown("""
     .stButton>button:hover { 
         background-color: #0b5ed7; 
         color: white; 
-    }
-    .assignment-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        border-right: 5px solid #0d6efd;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -201,10 +196,10 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الـ Assignments (الأسامينتس)
+# 3. قسم الـ Assignments (الأسامينتس) - بتصميم مدمج وموفر للمساحة
 elif menu == "📋 Assignments (الأسامينتس)":
     st.title("📋 Assignments المتاحة والتكاليف")
-    st.markdown("كل Assignment مرفوع من قبل الأدمن يظهر بوضوح أدناه مع ملف الأسئلة وتاريخ النشر. يمكنك رفع حل الـ Assignment واستعراض حالة التسليم.")
+    st.markdown("يمكنك الاطلاع على الـ Assignments، تحميل ملف الأسئلة، ورفع الحلول الخاصة بك بسهولة.")
     st.divider()
     
     if os.path.exists("assignments.csv"):
@@ -228,67 +223,65 @@ elif menu == "📋 Assignments (الأسامينتس)":
                     asg_deadline = row.get('الديدلاين', 'غير محدد')
                     asg_file = row.get('مسار_ملف_الأسئلة')
 
-                    # التحقق مما إذا كان الطالب قد رفع هذا الـ Assignment من قبل
                     is_submitted = asg_title in submitted_asgs
 
-                    # بطاقة عرض الـ Assignment بشكل واضح
-                    st.markdown(f"""
-                        <div class="assignment-card">
-                            <h3 style="color: #0d6efd; margin-top: 0;">📌 Assignment: {asg_title}</h3>
-                            <p style="color: #dc3545; font-weight: bold; margin-bottom: 5px;">⏰ موعد التسليم النهائي (Deadline): {asg_deadline}</p>
-                            <p style="color: #6c757d; font-size: 13px;">تاريخ النشر: {asg_date}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                    if is_submitted:
-                        st.success("✔️ **حالة الـ Assignment: تم رفع الحل وتسليمه للأدمن بنجاح!** يمكنك رفع حل جديد للاستبدال إذا رغبت.")
-                    else:
-                        st.warning("⚠️ **حالة الـ Assignment: لم تقم برفع الحل بعد (في انتظار التسليم).**")
-
-                    # تحميل ملف الأسئلة لو وجد
-                    if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
-                        with open(asg_file, "rb") as af:
-                            st.download_button(
-                                label="📥 تحميل ملف أسئلة الـ Assignment (PDF)",
-                                data=af,
-                                file_name=os.path.basename(asg_file),
-                                key=f"dl_asg_{index}"
-                            )
-                    
-                    # نموذج رفع الحل
-                    with st.form(f"submit_form_{index}"):
-                        uploaded_ans = st.file_uploader("📤 رفـع ملف حل الـ Assignment (PDF أو صور أو كود):", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
-                        submit_ans = st.form_submit_button("إرسال الحل وتسليمه للأدمن")
+                    # استخدام Expanders (قوائم منسدلة مدمجة) لكل Assignment لتوفير المساحة وعدم ازدحام الصفحة
+                    with st.expander(f"📌 Assignment: {asg_title} {' | (✔️ تم التسليم)' if is_submitted else ' | (⚠️ في انتظار التسليم)'}"):
                         
-                        if submit_ans:
-                            if uploaded_ans is not None:
-                                ans_filename = f"sub_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_ans.name}"
-                                ans_path_str = os.path.join("uploads", ans_filename)
-                                with open(ans_path_str, "wb") as sf:
-                                    sf.write(uploaded_ans.getbuffer())
-                                
-                                sub_exists = os.path.exists(sub_db)
-                                sub_records = []
-                                if sub_exists:
-                                    df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
-                                    df_s_old.columns = df_s_old.columns.str.strip()
-                                    for _, r in df_s_old.iterrows():
-                                        # استبعاد الحل القديم لنفس الـ Assignment لتجنب التكرار وحفظ أحدث حل
-                                        if not (str(r.get('اسم_المستخدم')).strip() == str(st.session_state.username) and str(r.get('عنوان_الواجب')).strip() == asg_title):
-                                            sub_records.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('عنوان_الواجب'), r.get('مسار_ملف_الحل'), r.get('التاريخ')])
-                                
-                                sub_records.append([st.session_state.current_user, st.session_state.username, asg_title, ans_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
-
-                                with open(sub_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
-                                    w = csv.writer(sf_csv)
-                                    w.writerow(["اسم_المتدرب", "اسم_المستخدم", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
-                                    w.writerows(sub_records)
-                                
-                                st.success("🎉 تم رفع وتسجيل حل الـ Assignment بنجاح تام! سيراه الأدمن في لوحة التحكم.")
-                                st.rerun()
+                        col_info1, col_info2 = st.columns([2, 1])
+                        with col_info1:
+                            st.markdown(f"**⏰ الموعد النهائي (Deadline):** <span style='color: #dc3545;'>{asg_deadline}</span>", unsafe_allow_html=True)
+                            st.caption(f"تاريخ النشر: {asg_date}")
+                        with col_info2:
+                            if is_submitted:
+                                st.success("✔️ تم التسليم")
                             else:
-                                st.warning("الرجاء اختيار ملف الحل قبل النقر على زر الإرسال.")
-                    st.write("---")
+                                st.warning("⚠️ لم يُسلم بعد")
+
+                        st.markdown("---")
+
+                        # زر تحميل ملف الأسئلة لو وجد
+                        if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
+                            with open(asg_file, "rb") as af:
+                                st.download_button(
+                                    label="📥 تحميل ملف أسئلة الـ Assignment (PDF)",
+                                    data=af,
+                                    file_name=os.path.basename(asg_file),
+                                    key=f"dl_asg_{index}"
+                                )
+                        
+                        # نموذج رفع الحل بشكل مدمج
+                        with st.form(f"submit_form_{index}"):
+                            uploaded_ans = st.file_uploader("📤 رفـع ملف حل الـ Assignment:", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
+                            submit_ans = st.form_submit_button("إرسال الحل وتسليمه للأدمن")
+                            
+                            if submit_ans:
+                                if uploaded_ans is not None:
+                                    ans_filename = f"sub_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_ans.name}"
+                                    ans_path_str = os.path.join("uploads", ans_filename)
+                                    with open(ans_path_str, "wb") as sf:
+                                        sf.write(uploaded_ans.getbuffer())
+                                    
+                                    sub_exists = os.path.exists(sub_db)
+                                    sub_records = []
+                                    if sub_exists:
+                                        df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
+                                        df_s_old.columns = df_s_old.columns.str.strip()
+                                        for _, r in df_s_old.iterrows():
+                                            if not (str(r.get('اسم_المستخدم')).strip() == str(st.session_state.username) and str(r.get('عنوان_الواجب')).strip() == asg_title):
+                                                sub_records.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('عنوان_الواجب'), r.get('مسار_ملف_الحل'), r.get('التاريخ')])
+                                    
+                                    sub_records.append([st.session_state.current_user, st.session_state.username, asg_title, ans_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+
+                                    with open(sub_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
+                                        w = csv.writer(sf_csv)
+                                        w.writerow(["اسم_المتدرب", "اسم_المستخدم", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
+                                        w.writerows(sub_records)
+                                    
+                                    st.success("🎉 تم رفع وتسجيل حل الـ Assignment بنجاح!")
+                                    st.rerun()
+                                else:
+                                    st.warning("الرجاء اختيار ملف الحل قبل النقر على زر الإرسال.")
             else:
                 st.info("لا توجد Assignments منشورة حتى الآن من قبل الأدمن.")
         except Exception as e:
