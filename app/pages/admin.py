@@ -125,17 +125,13 @@ st.divider()
 # 1. جداول مواعيد المجموعات
 if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
     st.subheader("📅 إضافة وإدارة جدول مواعيد لكل جروب تدريبي")
-    st.markdown("قم بإنشاء جدول أو مواعيد خاصة بكل مجموعة من مجموعات الشبكات والـ IT.")
-    st.divider()
-
     with st.form("group_schedule_form", clear_on_submit=True):
-        group_name = st.text_input("اسم الجروب (مثال: جروب يوم الاثنين - منه ونور وعمر):")
+        group_name = st.text_input("اسم الجروب (مثال: جروب الشبكات A):")
         session_day = st.selectbox("اليوم:", ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"])
-        session_time = st.text_input("موعد المحاضرة (مثال: من 4 لـ 6 عصراً):")
-        notes = st.text_area("ملاحظات أو تفاصيل إضافية للجروب:")
+        session_time = st.text_input("موعد المحاضرة:")
+        notes = st.text_area("ملاحظات إضافية:")
         
         submit_group_sch = st.form_submit_button("حفظ وإضافة الموعد للجروب")
-        
         if submit_group_sch:
             if group_name and session_time:
                 sched_records = []
@@ -146,15 +142,13 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
                         sched_records.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('ملاحظات')])
                 
                 sched_records.append([group_name.strip(), session_day, session_time.strip(), notes.strip()])
-                
                 with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sch:
                     w_sch = csv.writer(f_sch)
                     w_sch.writerow(["اسم_الجروب", "اليوم", "الموعد", "ملاحظات"])
                     w_sch.writerows(sched_records)
-                    
                 st.success(f"تم حفظ موعد الجروب ({group_name}) بنجاح!")
             else:
-                st.warning("الرجاء إدخال اسم الجروب وموعد المحاضرة على الأقل.")
+                st.warning("الرجاء إدخال اسم الجروب وموعد المحاضرة.")
 
     st.markdown("---")
     st.subheader("📋 جدول المجموعات والمواعيد الحالية:")
@@ -167,121 +161,104 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
                     g_name = row.get('اسم_الجروب', '')
                     g_day = row.get('اليوم', '')
                     g_time = row.get('الموعد', '')
-                    g_notes = row.get('ملاحظات', '')
                     
                     sc1, sc2, sc3 = st.columns([2, 2, 1])
                     with sc1:
                         st.markdown(f"👥 **الجروب:** {g_name}")
-                        st.caption(f"📝 ملاحظات: {g_notes}")
                     with sc2:
                         st.text(f"📅 اليوم: {g_day} | ⏰ الوقت: {g_time}")
                     with sc3:
-                        if st.button("🗑️ حذف الموعد", key=f"del_sch_{idx}"):
+                        if st.button("🗑️ حذف", key=f"del_sch_{idx}"):
                             updated_sch = []
                             for _, r in df_all_sch.iterrows():
                                 if not (str(r.get('اسم_الجروب')).strip() == str(g_name).strip() and str(r.get('الموعد')).strip() == str(g_time).strip()):
                                     updated_sch.append([r.get('اسم_الجروب'), r.get('اليوم'), r.get('الموعد'), r.get('ملاحظات')])
-                            
                             with open(groups_schedule_db, mode="w", encoding="utf-8-sig", newline="") as f_sout:
                                 w_sout = csv.writer(f_sout)
                                 w_sout.writerow(["اسم_الجروب", "اليوم", "الموعد", "ملاحظات"])
                                 w_sout.writerows(updated_sch)
-                            
-                            st.success(f"تم حذف موعد الجروب ({g_name}) بنجاح!")
                             st.rerun()
                     st.write("---")
-            else:
-                st.info("لا توجد مواعيد مضافة للمجموعات حتى الآن.")
         except Exception as e:
-            st.error(f"حدث خطأ أثناء قراءة جداول المجموعات: {e}")
-    else:
-        st.info("لا توجد جداول مجموعات مسجلة.")
+            st.error(f"خطأ: {e}")
 
-# 2. تسجيل حضور وغياب الطلاب (النظام الجديد بالزرار الفردي تحت كل طالب)
+# 2. تسجيل حضور وغياب الطلاب (بالبحث الفردي السريع والزر المستقل لكل طالب)
 elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
-    st.subheader("✅ تسجيل ومتابعة حضور وغياب المتدربين (لكل طالب بشكل منفصل)")
-    st.markdown("حدد أولاً **تاريخ المحاضرة وعنوانها**، ثم اختر **الجروب**، وتحت كل طالب اختر حالته واضغط على زر **(إضافة حضور الطالب)** الخاص به فقط.")
+    st.subheader("✅ تسجيل حضور وغياب الطلاب (بالبحث الفردي السريع)")
+    st.markdown("حدد التاريخ وعنوان المحاضرة، ثم ابحث عن اسم الطالب في شريط البحث أدناه، واضغط على زر الإضافة الخاص به فقط.")
     
     col_date1, col_date2 = st.columns(2)
     with col_date1:
-        att_date = st.date_input("📅 تاريخ المحاضرة:")
+        att_date = st.date_input("📅 تاريخ اليوم:")
     with col_date2:
         lecture_title_input = st.text_input("📝 عنوان المحاضرة أو الدرس:", "محاضرة اليوم")
 
-    if not os.path.exists(groups_schedule_db):
-        st.warning("⚠️ يرجى أولاً إضافة مجموعات من قسم (جداول مواعيد المجموعات).")
-    else:
+    st.divider()
+    
+    # شريط البحث عن الطالب لتسجيل حضوره
+    search_att_query = st.text_input("🔍 ابحث عن اسم الطالب لتسجيل حضوره (مثال: منه، نور، عمر):", "").strip()
+
+    if os.path.exists(users_db):
         try:
-            df_sched = pd.read_csv(groups_schedule_db, encoding="utf-8-sig", on_bad_lines="skip")
-            df_sched.columns = df_sched.columns.str.strip()
+            df_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
+            df_users.columns = df_users.columns.str.strip()
             
-            if df_sched.empty:
-                st.warning("لا توجد مجموعات مسجلة حالياً.")
-            else:
-                group_list = df_sched['اسم_الجروب'].astype(str).unique().tolist()
-                selected_group = st.selectbox("🎯 اختر الجروب المراد تسجيل الحضور له:", group_list)
-                
-                if os.path.exists(users_db):
-                    df_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
-                    df_users.columns = df_users.columns.str.strip()
-                    
-                    if not df_users.empty:
-                        # تصفية طلاب الجروب المرتبطين بالاسم أو عرض البحث
-                        df_group_users = df_users[
-                            df_users['المسار'].astype(str).str.strip().str.lower().str.contains(selected_group.lower()) |
-                            df_users['اسم_المتدرب'].astype(str).str.strip().str.lower().str.contains(selected_group.lower())
-                        ]
-                        
-                        if df_group_users.empty:
-                            df_group_users = df_users # لعرض جميع الطلاب إذا لم يتطابق الاسم بحرفية
-                            
-                        st.markdown(f"### 👥 طلاب جروب: {selected_group}")
-                        st.caption("لكل طالب، اختر الحالة ثم اضغط على زر (إضافة الحضور لهذا الطالب فقط):")
-                        
-                        for idx, row in df_group_users.iterrows():
-                            u_name = row.get('اسم_المتدرب', 'طالب')
-                            u_user = row.get('اسم_المستخدم', '')
-                            u_track = row.get('المسار', '')
-                            
-                            with st.container():
-                                c1, c2, c3 = st.columns([2, 1, 1])
-                                with c1:
-                                    st.markdown(f"**👤 الطالب:** {u_name} <br><span style='color:gray; font-size:12px;'>يوزر: {u_user} | المسار: {u_track}</span>", unsafe_allow_html=True)
-                                with c2:
-                                    status_choice = st.selectbox("الحالة", ["حاضر", "غائب", "متأخر"], key=f"status_single_{idx}")
-                                with c3:
-                                    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
-                                    btn_add_single = st.button("➕ إضافة الحضور", key=f"btn_single_{idx}")
-                                    
-                                    if btn_add_single:
-                                        # قراءة ملف الحضور القديم
-                                        att_records = []
-                                        if os.path.exists(attendance_db):
-                                            df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
-                                            df_att_old.columns = df_att_old.columns.str.strip()
-                                            for _, r in df_att_old.iterrows():
-                                                att_records.append([r.get('التاريخ'), r.get('الجروب'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
-                                        
-                                        # إزالة أي سجل قديم لنفس الطالب في نفس التاريخ لمنع التكرار
-                                        att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[4]).strip() == str(u_user).strip())]
-                                        
-                                        # إضافة سجل الطالب المحدد فقط
-                                        att_records.append([str(att_date), selected_group, lecture_title_input.strip(), u_name, u_user, status_choice])
-                                        
-                                        # حفظ الملف
-                                        with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
-                                            w_att = csv.writer(f_att)
-                                            w_att.writerow(["التاريخ", "الجروب", "عنوان_المحاضرة", "اسم_المتدرب", "اسم_المستخدم", "الحالة"])
-                                            w_att.writerows(att_records)
-                                            
-                                        st.success(f"✅ تم تسجيل الطالب ({u_name}) - الحالة: ({status_choice}) بنجاح!")
-                                st.divider()
-                    else:
-                        st.info("لا يوجد طلاب مسجلين في النظام.")
+            if not df_users.empty:
+                if search_att_query:
+                    df_filtered_users = df_users[
+                        df_users['اسم_المتدرب'].astype(str).str.contains(search_att_query, case=False, na=False) | 
+                        df_users['اسم_المستخدم'].astype(str).str.contains(search_att_query, case=False, na=False)
+                    ]
                 else:
-                    st.warning("لا توجد بيانات طلاب مسجلة.")
+                    df_filtered_users = pd.DataFrame(columns=df_users.columns) # لا تظهر الكل إلا إذا كتب شيئاً لتسهيل البحث
+                    st.info("💡 اكتب اسم الطالب في شريط البحث أعلاه ليظهر لك وتتمكن من تسجيل حضوره.")
+
+                if not df_filtered_users.empty:
+                    st.markdown("### نتائج البحث والطلاب المطابقين:")
+                    for idx, row in df_filtered_users.iterrows():
+                        u_name = row.get('اسم_المتدرب', 'طالب')
+                        u_user = row.get('اسم_المستخدم', '')
+                        u_track = row.get('المسار', '')
+                        
+                        with st.container():
+                            c1, c2, c3 = st.columns([2, 1, 1])
+                            with c1:
+                                st.markdown(f"**👤 الطالب:** {u_name} <br><span style='color:gray; font-size:12px;'>يوزر: {u_user} | المسار: {u_track}</span>", unsafe_allow_html=True)
+                            with c2:
+                                status_choice = st.selectbox("الحالة", ["حاضر", "غائب", "متأخر"], key=f"status_search_{idx}")
+                            with c3:
+                                st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+                                btn_add_search = st.button("➕ إضافة الحضور", key=f"btn_search_{idx}")
+                                
+                                if btn_add_search:
+                                    att_records = []
+                                    if os.path.exists(attendance_db):
+                                        df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
+                                        df_att_old.columns = df_att_old.columns.str.strip()
+                                        for _, r in df_att_old.iterrows():
+                                            att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
+                                    
+                                    # إزالة أي سجل قديم لنفس الطالب في نفس التاريخ لمنع التكرار وتحديث حالته
+                                    att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[3]).strip() == str(u_user).strip())]
+                                    
+                                    # إضافة سجل الطالب المحدد فقط
+                                    att_records.append([str(att_date), lecture_title_input.strip(), u_name, u_user, status_choice])
+                                    
+                                    with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
+                                        w_att = csv.writer(f_att)
+                                        w_att.writerow(["التاريخ", "عنوان_المحاضرة", "اسم_المتدرب", "اسم_المستخدم", "الحالة"])
+                                        w_att.writerows(att_records)
+                                        
+                                    st.success(f"✅ تم تسجيل الطالب ({u_name}) - الحالة: ({status_choice}) بتاريخ ({att_date}) بنجاح!")
+                            st.divider()
+                elif search_att_query:
+                    st.warning("⚠️ عذراً، لا يوجد طالب مطابَق لاسم البحث.")
+            else:
+                st.info("لا يوجد طلاب مسجلين في النظام.")
         except Exception as e:
-            st.error(f"حدث خطأ: {e}")
+            st.error(f"خطأ: {e}")
+    else:
+        st.warning("لا توجد بيانات طلاب مسجلة.")
 
     st.markdown("---")
     st.subheader("📊 سجل الحضور السابق:")
@@ -362,12 +339,8 @@ elif admin_menu == "⭐ تقييم المتدربين وملاحظات التح�
                             w_p.writerows(profiles_list)
                         
                         st.success(f"تم تحديث التقييم والملاحظات الخاصة بالطالب بنجاح!")
-            else:
-                st.info("لا يوجد متدربين.")
         except Exception as e:
             st.error(f"خطأ: {e}")
-    else:
-        st.warning("لا توجد بيانات مستخدمين.")
 
 # 4. إدارة المتدربين (إضافة + بحث سريع + جدول عرض وحذف الطلاب)
 elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، حذف)":
@@ -461,16 +434,10 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
                                 st.success(f"تم حذف الطالب ({u_name}) بنجاح!")
                                 st.rerun()
                         st.write("---")
-                else:
-                    st.warning("⚠️ عذراً، لا يوجد طالب مطابق لبحثك.")
-            else:
-                st.info("لا يوجد طلاب متدربين.")
         except Exception as e:
             st.error(f"خطأ: {e}")
-    else:
-        st.info("لا توجد بيانات طلاب.")
 
-# 5. خريجي التدريب (سجل الخريجين والمدربين المنتهين)
+# 5. خريجي التدريب (سجل الخريجين)
 elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
     st.subheader("🎓 سجل خريجي التدريب والطلاب الذين أكملوا الكورس بنجاح")
     with st.form("add_graduate_form", clear_on_submit=True):
@@ -482,7 +449,7 @@ elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
             grad_track = st.selectbox("المسار أو الكورس:", ["Networks & IT", "Cisco CCNA", "Routing & Switching", "Network Security", "برمجة وروبوتات"])
             grad_eval = st.selectbox("التقييم النهائي بنهاية الكورس:", ["⭐ ممتاز جداً مع مرتبة الشرف", "⭐ ممتاز", "⭐ جيد جداً", "⭐ جيد", "⭐ مجتاز التدريب بنجاح"])
         
-        grad_notes = st.text_area("ملاحظات إضافية (أو مكان العمل/المهارة المكتسبة):")
+        grad_notes = st.text_area("ملاحظات إضافية:")
         submit_grad = st.form_submit_button("حفظ وإضافة إلى سجل الخريجين")
         
         if submit_grad:
@@ -499,46 +466,7 @@ elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
                     w_g = csv.writer(f_g)
                     w_g.writerow(["الاسم", "رقم_التليفون", "المسار", "التقييم", "ملاحظات"])
                     w_g.writerows(grad_records)
-                st.success(f"تم حفظ الخريج ({grad_name}) في السجل بنجاح!")
-            else:
-                st.warning("الرجاء إدخال اسم الخريج ورقم التليفون على الأقل.")
-
-    st.markdown("---")
-    st.subheader("📋 قائمة خريجي التدريب المسجلين:")
-    if os.path.exists(graduates_db):
-        try:
-            df_all_grads = pd.read_csv(graduates_db, encoding="utf-8-sig", on_bad_lines="skip")
-            df_all_grads.columns = df_all_grads.columns.str.strip()
-            if not df_all_grads.empty:
-                for idx, row in df_all_grads.iterrows():
-                    g_name = row.get('الاسم', '')
-                    g_phone = row.get('رقم_التليفون', '')
-                    g_track = row.get('المسار', '')
-                    g_eval = row.get('التقييم', '')
-                    g_notes = row.get('ملاحظات', '')
-                    
-                    gc1, gc2, gc3 = st.columns([2, 2, 1])
-                    with gc1:
-                        st.markdown(f"🎓 **الخريج:** {g_name}")
-                        st.text(f"📞 هاتف: {g_phone}")
-                    with gc2:
-                        st.text(f"💻 المسار: {g_track}")
-                        st.markdown(f"**التقييم:** {g_eval}")
-                    with gc3:
-                        if st.button("🗑️ حذف من السجل", key=f"del_grad_{idx}"):
-                            updated_grads = []
-                            for _, r in df_all_grads.iterrows():
-                                if not (str(r.get('الاسم')).strip() == str(g_name).strip() and str(r.get('رقم_التليفون')).strip() == str(g_phone).strip()):
-                                    updated_grads.append([r.get('الاسم'), r.get('رقم_التليفون'), r.get('المسار'), r.get('التقييم'), r.get('ملاحظات')])
-                            with open(graduates_db, mode="w", encoding="utf-8-sig", newline="") as f_gout:
-                                w_gout = csv.writer(f_gout)
-                                w_gout.writerow(["الاسم", "رقم_التليفون", "المسار", "التقييم", "ملاحظات"])
-                                w_gout.writerows(updated_grads)
-                            st.success(f"تم حذف الخريج ({g_name}) بنجاح!")
-                            st.rerun()
-                    st.write("---")
-        except Exception as e:
-            st.error(f"خطأ: {e}")
+                st.success(f"تم حفظ الخريج ({grad_name}) بنجاح!")
 
 # 6. إدارة المدربين والأدمن وتغيير الباسورد
 elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير الباسورد":
@@ -567,8 +495,6 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                             st.success(f"تم إضافة حساب المدرب ({new_adm_name}) بنجاح!")
                     except Exception as e:
                         st.error(f"خطأ: {e}")
-                else:
-                    st.warning("الرجاء ملء جميع الحقول.")
 
     with col_adm2:
         st.markdown("### 🔒 تغيير كلمة المرور لحسابك")
@@ -638,8 +564,6 @@ elif admin_menu == "📢 نشر الإعلانات والأخبار":
                     w_an.writerow(["العنوان", "المحتوى", "صورة_الإعلان", "التاريخ"])
                     w_an.writerows(ann_records)
                 st.success("تم نشر الإعلان بنجاح!")
-            else:
-                st.warning("الرجاء إدخال عنوان ومحتوى الإعلان.")
 
 # 8. رفع ملفات المحاضرات
 elif admin_menu == "📚 رفع ملفات المحاضرات":
@@ -734,7 +658,5 @@ elif admin_menu == "📥 متابعة حلول المتدربين":
                                 key=f"dl_sub_{idx}"
                             )
                     st.write("---")
-            else:
-                st.info("لا توجد حلول مرفوعة.")
         except Exception as e:
             st.error(f"خطأ: {e}")
