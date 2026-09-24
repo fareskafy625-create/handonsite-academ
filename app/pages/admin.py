@@ -337,7 +337,7 @@ elif admin_menu == "⭐ تقييم المتدربين وملاحظات التح�
     else:
         st.warning("لا توجد بيانات مستخدمين.")
 
-# 4. إدارة المتدربين (إضافة + جدول عرض وحذف الطلاب) مع تفريغ الحقول تلقائياً
+# 4. إدارة المتدربين (إضافة + بحث سريع + جدول عرض وحذف الطلاب)
 elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، حذف)":
     st.subheader("👥 إدارة الطلاب المتدربين")
     
@@ -364,7 +364,7 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
         
     st.divider()
     
-    with st.expander("➕ إضافة طالب متدرب جديد", expanded=True):
+    with st.expander("➕ إضافة طالب متدرب جديد", expanded=False):
         # استخدام clear_on_submit=True لتفريغ الخانات تلقائياً بعد الحفظ لإضافة الطالب التالي مباشرة
         with st.form("add_user_form", clear_on_submit=True):
             trainee_name = st.text_input("اسم المتدرب الكامل:")
@@ -387,37 +387,54 @@ elif admin_menu == "👥 إدارة المتدربين (عرض، إضافة، ح
                 else:
                     st.warning("الرجاء تعبئة جميع الحقول المطلوبة.")
                     
-    st.markdown("### 📋 جدول الطلاب المتدربين الحاليين:")
+    st.markdown("### 📋 جدول الطلاب المتدربين والبحث السريع:")
+    
+    # شريط البحث الذكي
+    search_query = st.text_input("🔍 ابحث عن طالب (اكتب اسم الطالب أو اسم المستخدم):", "").strip()
+
     if os.path.exists(users_db):
         try:
             df_all_users = pd.read_csv(users_db, encoding="utf-8-sig", on_bad_lines="skip")
             df_all_users.columns = df_all_users.columns.str.strip()
+            
             if not df_all_users.empty:
-                for idx, row in df_all_users.iterrows():
-                    u_name = row.get('اسم_المتدرب', '')
-                    u_user = row.get('اسم_المستخدم', '')
-                    u_track = row.get('المسار', '')
-                    
-                    uc1, uc2, uc3 = st.columns([2, 2, 1])
-                    with uc1:
-                        st.text(f"👤 الطالب: {u_name}")
-                    with uc2:
-                        st.text(f"💻 اليوزر: {u_user} | المسار: {u_track}")
-                    with uc3:
-                        if st.button("🗑️ حذف", key=f"del_user_{idx}"):
-                            updated_users = []
-                            for _, r in df_all_users.iterrows():
-                                if str(r.get('اسم_المستخدم')).strip() != str(u_user).strip():
-                                    updated_users.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('المسار')])
-                            
-                            with open(users_db, mode="w", encoding="utf-8-sig", newline="") as f_uout:
-                                w_uout = csv.writer(f_uout)
-                                w_uout.writerow(["اسم_المتدرب", "اسم_المستخدم", "كلمة_المرور", "المسار"])
-                                w_uout.writerows(updated_users)
-                            
-                            st.success(f"تم حذف الطالب ({u_name}) بنجاح!")
-                            st.rerun()
-                    st.write("---")
+                # تصفية الطلاب بناءً على شريط البحث
+                if search_query:
+                    df_filtered = df_all_users[
+                        df_all_users['اسم_المتدرب'].astype(str).str.contains(search_query, case=False, na=False) | 
+                        df_all_users['اسم_المستخدم'].astype(str).str.contains(search_query, case=False, na=False)
+                    ]
+                else:
+                    df_filtered = df_all_users
+
+                if not df_filtered.empty:
+                    for idx, row in df_filtered.iterrows():
+                        u_name = row.get('اسم_المتدرب', '')
+                        u_user = row.get('اسم_المستخدم', '')
+                        u_track = row.get('المسار', '')
+                        
+                        uc1, uc2, uc3 = st.columns([2, 2, 1])
+                        with uc1:
+                            st.text(f"👤 الطالب: {u_name}")
+                        with uc2:
+                            st.text(f"💻 اليوزر: {u_user} | المسار: {u_track}")
+                        with uc3:
+                            if st.button("🗑️ حذف", key=f"del_user_{idx}"):
+                                updated_users = []
+                                for _, r in df_all_users.iterrows():
+                                    if str(r.get('اسم_المستخدم')).strip() != str(u_user).strip():
+                                        updated_users.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('كلمة_المرور'), r.get('المسار')])
+                                
+                                with open(users_db, mode="w", encoding="utf-8-sig", newline="") as f_uout:
+                                    w_uout = csv.writer(f_uout)
+                                    w_uout.writerow(["اسم_المتدرب", "اسم_المستخدم", "كلمة_المرور", "المسار"])
+                                    w_uout.writerows(updated_users)
+                                
+                                st.success(f"تم حذف الطالب ({u_name}) بنجاح!")
+                                st.rerun()
+                        st.write("---")
+                else:
+                    st.warning("⚠️ عذراً، لا يوجد طالب مطابق لبحثك.")
             else:
                 st.info("لا يوجد طلاب متدربين.")
         except Exception as e:
