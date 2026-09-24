@@ -7,21 +7,34 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="بوابة المتدرب - أكاديمية HandsOnSite", page_icon="💻", layout="wide")
 
-# تصميم CSS مخصص لتجميل القائمة الجانبية على شكل أزرار ومربعات احترافية
+# تصميم CSS مخصص لخلفية شفافة وزجاجية عصرية وأزرار جانبية احترافية
 st.markdown("""
     <style>
-    .main { background-color: #f4f6f9; }
+    /* خلفية شفافة وتدرج ألوان احترافي للصفحة بالكامل */
+    .stApp {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(244, 246, 249, 0.85) 100%);
+    }
+
+    /* تأثير زجاجي شفاف (Glassmorphism) للعناصر والكروت الرئيسية */
+    .assignment-card, .stInfo, div[data-testid="stExpander"] {
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    }
     
-    /* تصميم أزرار القائمة الجانبية لتكون بشكل مربعات وأزرار احترافية */
+    /* تصميم أزرار القائمة الجانبية لتكون بشكل مربعات وأزرار شفافة واحترافية */
     div.stButton > button {
         width: 100%;
         border-radius: 10px;
         font-weight: bold;
         height: 48px;
-        background-color: #ffffff;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(5px);
         color: #0d6efd;
-        border: 2px solid #0d6efd;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid rgba(13, 110, 253, 0.3);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         transition: all 0.3s ease;
         margin-bottom: 8px;
         text-align: right;
@@ -32,25 +45,6 @@ st.markdown("""
         color: white; 
         border-color: #0d6efd;
         transform: translateY(-2px);
-    }
-    
-    /* زر تسجيل الخروج بلون مميز (أحمر خفيف) */
-    div.stButton.logout-btn > button {
-        border-color: #dc3545;
-        color: #dc3545;
-    }
-    div.stButton.logout-btn > button:hover {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .assignment-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-right: 4px solid #0d6efd;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -67,7 +61,7 @@ if not st.session_state.logged_in:
     
     with col2:
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.8); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
                 <h2 style="color: #0d6efd; margin-bottom: 5px;">💻 أكاديمية HandsOnSite</h2>
                 <p style="color: #6c757d; font-size: 15px;">بوابة تسجيل دخول المتدربين</p>
             </div>
@@ -96,7 +90,6 @@ if not st.session_state.logged_in:
                                 st.session_state.username = username.strip()
                                 st.session_state.current_user = user_match.iloc[0]['اسم_المتدرب']
                                 st.session_state.user_track = user_match.iloc[0]['المسار']
-                                # تعيين الصفحة الافتراضية عند الدخول
                                 st.session_state.active_page = "📢 الإعلانات والأخبار"
                                 st.success("تم تسجيل الدخول بنجاح! جاري تحويلك...")
                                 st.rerun()
@@ -117,7 +110,7 @@ if not st.session_state.logged_in:
         
     st.stop()
 
-# تتبع الصفحة الحالية في الـ Session State لتنقل الأزرار الاحترافية
+# تتبع الصفحة الحالية في الـ Session State
 if 'active_page' not in st.session_state:
     st.session_state.active_page = "📢 الإعلانات والأخبار"
 
@@ -153,7 +146,6 @@ st.sidebar.divider()
 
 st.sidebar.markdown("### 🎛️ الأقسام الرئيسية:")
 
-# أزرار القائمة الجانبية الاحترافية
 if st.sidebar.button("📢 الإعلانات والأخبار"):
     st.session_state.active_page = "📢 الإعلانات والأخبار"
     st.rerun()
@@ -176,7 +168,6 @@ if st.sidebar.button("🚪 تسجيل الخروج"):
     st.session_state.logged_in = False
     st.rerun()
 
-# استدعاء الصفحة النشطة بناءً على زر القائمة الجانبية المختار
 menu = st.session_state.active_page
 
 # 1. قسم الإعلانات
@@ -231,7 +222,7 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الـ Assignments (الأسامينتس) - مدمج وموفر للمساحة
+# 3. قسم الـ Assignments (الأسامينتس) - بتصميم مدمج وموفر للمساحة
 elif menu == "📋 Assignments (الأسامينتس)":
     st.title("📋 Assignments المتاحة والتكاليف")
     st.markdown("يمكنك الاطلاع على الـ Assignments، تحميل ملف الأسئلة، ورفع الحلول الخاصة بك بسهولة.")
@@ -340,7 +331,7 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
         st.metric(label="حالة التقييم العام", value=current_eval)
         
         st.markdown(f"""
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; margin-top: 15px;">
+            <div style="background-color: rgba(255, 243, 205, 0.9); padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; margin-top: 15px;">
                 <h4 style="color: #856404; margin-top: 0; font-size: 15px;">📌 ملاحظات وتوجيهات المدرب لحل المشاكل:</h4>
                 <p style="color: #533f03; font-size: 14px; line-height: 1.5; margin-bottom: 0;">{improvement_notes}</p>
             </div>
