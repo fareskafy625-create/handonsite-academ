@@ -7,37 +7,50 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="بوابة المتدرب - أكاديمية HandsOnSite", page_icon="💻", layout="wide")
 
-# تصميم CSS مخصص لتصغير وتجميل بطاقات الـ Assignments لتكون مدمجة وموفرة للمساحة
+# تصميم CSS مخصص لتجميل القائمة الجانبية على شكل أزرار ومربعات احترافية
 st.markdown("""
     <style>
     .main { background-color: #f4f6f9; }
     
-    /* تنسيق بطاقة الـ Assignment لتكون مضغوطة وأنيقة */
-    .assignment-card-compact {
+    /* تصميم أزرار القائمة الجانبية لتكون بشكل مربعات وأزرار احترافية */
+    div.stButton > button {
+        width: 100%;
+        border-radius: 10px;
+        font-weight: bold;
+        height: 48px;
+        background-color: #ffffff;
+        color: #0d6efd;
+        border: 2px solid #0d6efd;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+        text-align: right;
+        padding-right: 20px;
+    }
+    div.stButton > button:hover { 
+        background-color: #0d6efd; 
+        color: white; 
+        border-color: #0d6efd;
+        transform: translateY(-2px);
+    }
+    
+    /* زر تسجيل الخروج بلون مميز (أحمر خفيف) */
+    div.stButton.logout-btn > button {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    div.stButton.logout-btn > button:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .assignment-card {
         background-color: white;
-        padding: 12px 18px;
+        padding: 15px;
         border-radius: 8px;
         border-right: 4px solid #0d6efd;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    /* تنسيق الأزرار */
-    .stButton>button {
-        width: 100%;
-        border-radius: 6px;
-        font-weight: bold;
-        height: 38px;
-        background-color: #0d6efd;
-        color: white;
-        transition: 0.3s;
-    }
-    .stButton>button:hover { 
-        background-color: #0b5ed7; 
-        color: white; 
     }
     </style>
 """, unsafe_allow_html=True)
@@ -83,6 +96,8 @@ if not st.session_state.logged_in:
                                 st.session_state.username = username.strip()
                                 st.session_state.current_user = user_match.iloc[0]['اسم_المتدرب']
                                 st.session_state.user_track = user_match.iloc[0]['المسار']
+                                # تعيين الصفحة الافتراضية عند الدخول
+                                st.session_state.active_page = "📢 الإعلانات والأخبار"
                                 st.success("تم تسجيل الدخول بنجاح! جاري تحويلك...")
                                 st.rerun()
                             else:
@@ -101,6 +116,10 @@ if not st.session_state.logged_in:
         """, unsafe_allow_html=True)
         
     st.stop()
+
+# تتبع الصفحة الحالية في الـ Session State لتنقل الأزرار الاحترافية
+if 'active_page' not in st.session_state:
+    st.session_state.active_page = "📢 الإعلانات والأخبار"
 
 # جلب أو إنشاء ملف خاص ببيانات الملف الشخصي الإضافية
 profile_db = "profiles.csv"
@@ -124,7 +143,7 @@ if not user_prof_row.empty:
     if val_notes != "nan" and val_notes.strip() != "":
         improvement_notes = val_notes
 
-# عرض الصورة الشخصية في القائمة الجانبية إن وجدت
+# تصميم القائمة الجانبية الاحترافية (مربعات وأزرار)
 if pd.notna(current_avatar) and os.path.exists(current_avatar):
     st.sidebar.image(current_avatar, width=120)
 
@@ -132,17 +151,33 @@ st.sidebar.markdown(f"### أهلاً بك، {st.session_state.get('current_user'
 st.sidebar.markdown(f"**المسار التدريبي:** {st.session_state.get('user_track', 'عام')}")
 st.sidebar.divider()
 
-menu = st.sidebar.radio("القائمة الرئيسية:", [
-    "📢 الإعلانات والأخبار",
-    "📚 ملفات ومصادر المحاضرات",
-    "📋 Assignments (الأسامينتس)",
-    "⚙️ الملف الشخصي وتقييمي",
-    "🚪 تسجيل الخروج"
-])
+st.sidebar.markdown("### 🎛️ الأقسام الرئيسية:")
 
-if menu == "🚪 تسجيل الخروج":
+# أزرار القائمة الجانبية الاحترافية
+if st.sidebar.button("📢 الإعلانات والأخبار"):
+    st.session_state.active_page = "📢 الإعلانات والأخبار"
+    st.rerun()
+
+if st.sidebar.button("📚 ملفات ومصادر المحاضرات"):
+    st.session_state.active_page = "📚 ملفات ومصادر المحاضرات"
+    st.rerun()
+
+if st.sidebar.button("📋 Assignments (الأسامينتس)"):
+    st.session_state.active_page = "📋 Assignments (الأسامينتس)"
+    st.rerun()
+
+if st.sidebar.button("⚙️ الملف الشخصي وتقييمي"):
+    st.session_state.active_page = "⚙️ الملف الشخصي وتقييمي"
+    st.rerun()
+
+st.sidebar.divider()
+
+if st.sidebar.button("🚪 تسجيل الخروج"):
     st.session_state.logged_in = False
     st.rerun()
+
+# استدعاء الصفحة النشطة بناءً على زر القائمة الجانبية المختار
+menu = st.session_state.active_page
 
 # 1. قسم الإعلانات
 if menu == "📢 الإعلانات والأخبار":
@@ -196,7 +231,7 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الـ Assignments (الأسامينتس) - بتصميم مدمج وموفر للمساحة
+# 3. قسم الـ Assignments (الأسامينتس) - مدمج وموفر للمساحة
 elif menu == "📋 Assignments (الأسامينتس)":
     st.title("📋 Assignments المتاحة والتكاليف")
     st.markdown("يمكنك الاطلاع على الـ Assignments، تحميل ملف الأسئلة، ورفع الحلول الخاصة بك بسهولة.")
@@ -207,7 +242,6 @@ elif menu == "📋 Assignments (الأسامينتس)":
             df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", on_bad_lines="skip")
             df_asg.columns = df_asg.columns.str.strip()
             
-            # جلب الحلول السابقة للتأكد من حالة التسليم
             submitted_asgs = []
             sub_db = "submissions.csv"
             if os.path.exists(sub_db):
@@ -225,7 +259,6 @@ elif menu == "📋 Assignments (الأسامينتس)":
 
                     is_submitted = asg_title in submitted_asgs
 
-                    # استخدام Expanders (قوائم منسدلة مدمجة) لكل Assignment لتوفير المساحة وعدم ازدحام الصفحة
                     with st.expander(f"📌 Assignment: {asg_title} {' | (✔️ تم التسليم)' if is_submitted else ' | (⚠️ في انتظار التسليم)'}"):
                         
                         col_info1, col_info2 = st.columns([2, 1])
@@ -240,7 +273,6 @@ elif menu == "📋 Assignments (الأسامينتس)":
 
                         st.markdown("---")
 
-                        # زر تحميل ملف الأسئلة لو وجد
                         if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
                             with open(asg_file, "rb") as af:
                                 st.download_button(
@@ -250,7 +282,6 @@ elif menu == "📋 Assignments (الأسامينتس)":
                                     key=f"dl_asg_{index}"
                                 )
                         
-                        # نموذج رفع الحل بشكل مدمج
                         with st.form(f"submit_form_{index}"):
                             uploaded_ans = st.file_uploader("📤 رفـع ملف حل الـ Assignment:", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
                             submit_ans = st.form_submit_button("إرسال الحل وتسليمه للأدمن")
@@ -308,7 +339,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
         st.subheader("⭐ تقييمك الأكاديمي")
         st.metric(label="حالة التقييم العام", value=current_eval)
         
-        # عرض ملاحظات الإصلاح والتوجيهات التي كتبها الأدمن
         st.markdown(f"""
             <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; margin-top: 15px;">
                 <h4 style="color: #856404; margin-top: 0; font-size: 15px;">📌 ملاحظات وتوجيهات المدرب لحل المشاكل:</h4>
@@ -335,7 +365,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                 
                 st.session_state.current_user = new_name_input.strip()
                 
-                # تحديث الاسم وكلمة المرور في ملف users.csv
                 if os.path.exists("users.csv"):
                     df_u = pd.read_csv("users.csv", encoding="utf-8-sig", on_bad_lines="skip")
                     mask = df_u['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)
@@ -346,7 +375,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                         
                     df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
                 
-                # تحديث الصورة والبيانات في profiles.csv
                 profiles_list = []
                 if os.path.exists(profile_db):
                     df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", on_bad_lines="skip")
