@@ -182,10 +182,10 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
         except Exception as e:
             st.error(f"خطأ: {e}")
 
-# 2. تسجيل حضور وغياب الطلاب (بالبحث الفردي السريع والزر المستقل لكل طالب)
+# 2. تسجيل حضور وغياب الطلاب (عرض الكل + زر إضافة لكل طالب)
 elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
-    st.subheader("✅ تسجيل حضور وغياب الطلاب (بالبحث الفردي السريع)")
-    st.markdown("حدد التاريخ وعنوان المحاضرة، ثم ابحث عن اسم الطالب في شريط البحث أدناه، واضغط على زر الإضافة الخاص به فقط.")
+    st.subheader("✅ تسجيل حضور وغياب الطلاب")
+    st.markdown("حدد التاريخ وعنوان المحاضرة بالأعلى، ثم استعرض الطلاب الموجودين، واختر حالة الطالب واضغط على (إضافة الحضور) الخاص به مباشرة.")
     
     col_date1, col_date2 = st.columns(2)
     with col_date1:
@@ -194,9 +194,6 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
         lecture_title_input = st.text_input("📝 عنوان المحاضرة أو الدرس:", "محاضرة اليوم")
 
     st.divider()
-    
-    # شريط البحث عن الطالب لتسجيل حضوره
-    search_att_query = st.text_input("🔍 ابحث عن اسم الطالب لتسجيل حضوره (مثال: منه، نور، عمر):", "").strip()
 
     if os.path.exists(users_db):
         try:
@@ -204,55 +201,44 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
             df_users.columns = df_users.columns.str.strip()
             
             if not df_users.empty:
-                if search_att_query:
-                    df_filtered_users = df_users[
-                        df_users['اسم_المتدرب'].astype(str).str.contains(search_att_query, case=False, na=False) | 
-                        df_users['اسم_المستخدم'].astype(str).str.contains(search_att_query, case=False, na=False)
-                    ]
-                else:
-                    df_filtered_users = pd.DataFrame(columns=df_users.columns) # لا تظهر الكل إلا إذا كتب شيئاً لتسهيل البحث
-                    st.info("💡 اكتب اسم الطالب في شريط البحث أعلاه ليظهر لك وتتمكن من تسجيل حضوره.")
-
-                if not df_filtered_users.empty:
-                    st.markdown("### نتائج البحث والطلاب المطابقين:")
-                    for idx, row in df_filtered_users.iterrows():
-                        u_name = row.get('اسم_المتدرب', 'طالب')
-                        u_user = row.get('اسم_المستخدم', '')
-                        u_track = row.get('المسار', '')
-                        
-                        with st.container():
-                            c1, c2, c3 = st.columns([2, 1, 1])
-                            with c1:
-                                st.markdown(f"**👤 الطالب:** {u_name} <br><span style='color:gray; font-size:12px;'>يوزر: {u_user} | المسار: {u_track}</span>", unsafe_allow_html=True)
-                            with c2:
-                                status_choice = st.selectbox("الحالة", ["حاضر", "غائب", "متأخر"], key=f"status_search_{idx}")
-                            with c3:
-                                st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
-                                btn_add_search = st.button("➕ إضافة الحضور", key=f"btn_search_{idx}")
+                st.markdown(f"### 👥 قائمة جميع الطلاب ({len(df_users)} طالب):")
+                
+                for idx, row in df_users.iterrows():
+                    u_name = row.get('اسم_المتدرب', 'طالب')
+                    u_user = row.get('اسم_المستخدم', '')
+                    u_track = row.get('المسار', '')
+                    
+                    with st.container():
+                        c1, c2, c3 = st.columns([2, 1, 1])
+                        with c1:
+                            st.markdown(f"**👤 الطالب:** {u_name} <br><span style='color:gray; font-size:12px;'>يوزر: {u_user} | المسار: {u_track}</span>", unsafe_allow_html=True)
+                        with c2:
+                            status_choice = st.selectbox("الحالة", ["حاضر", "غائب", "متأخر"], key=f"status_all_{idx}")
+                        with c3:
+                            st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+                            btn_add_all = st.button("➕ إضافة الحضور", key=f"btn_all_{idx}")
+                            
+                            if btn_add_all:
+                                att_records = []
+                                if os.path.exists(attendance_db):
+                                    df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
+                                    df_att_old.columns = df_att_old.columns.str.strip()
+                                    for _, r in df_att_old.iterrows():
+                                        att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
                                 
-                                if btn_add_search:
-                                    att_records = []
-                                    if os.path.exists(attendance_db):
-                                        df_att_old = pd.read_csv(attendance_db, encoding="utf-8-sig", on_bad_lines="skip")
-                                        df_att_old.columns = df_att_old.columns.str.strip()
-                                        for _, r in df_att_old.iterrows():
-                                            att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
+                                # إزالة أي سجل قديم لنفس الطالب في نفس التاريخ لتحديث حالته بدقة
+                                att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[3]).strip() == str(u_user).strip())]
+                                
+                                # إضافة سجل الطالب المحدد فقط
+                                att_records.append([str(att_date), lecture_title_input.strip(), u_name, u_user, status_choice])
+                                
+                                with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
+                                    w_att = csv.writer(f_att)
+                                    w_att.writerow(["التاريخ", "عنوان_المحاضرة", "اسم_المتدرب", "اسم_المستخدم", "الحالة"])
+                                    w_att.writerows(att_records)
                                     
-                                    # إزالة أي سجل قديم لنفس الطالب في نفس التاريخ لمنع التكرار وتحديث حالته
-                                    att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[3]).strip() == str(u_user).strip())]
-                                    
-                                    # إضافة سجل الطالب المحدد فقط
-                                    att_records.append([str(att_date), lecture_title_input.strip(), u_name, u_user, status_choice])
-                                    
-                                    with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
-                                        w_att = csv.writer(f_att)
-                                        w_att.writerow(["التاريخ", "عنوان_المحاضرة", "اسم_المتدرب", "اسم_المستخدم", "الحالة"])
-                                        w_att.writerows(att_records)
-                                        
-                                    st.success(f"✅ تم تسجيل الطالب ({u_name}) - الحالة: ({status_choice}) بتاريخ ({att_date}) بنجاح!")
-                            st.divider()
-                elif search_att_query:
-                    st.warning("⚠️ عذراً، لا يوجد طالب مطابَق لاسم البحث.")
+                                st.success(f"✅ تم تسجيل الطالب ({u_name}) - الحالة: ({status_choice}) بنجاح!")
+                        st.divider()
             else:
                 st.info("لا يوجد طلاب مسجلين في النظام.")
         except Exception as e:
