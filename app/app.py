@@ -140,7 +140,7 @@ st.sidebar.divider()
 menu = st.sidebar.radio("القائمة الرئيسية:", [
     "📢 الإعلانات والأخبار",
     "📚 ملفات ومصادر المحاضرات",
-    "📋 الواجبات والتكاليف (Assignments)",
+    "📋 Assignments (الأسامينتس)",
     "⚙️ الملف الشخصي وتقييمي",
     "🚪 تسجيل الخروج"
 ])
@@ -201,10 +201,10 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الواجبات والأسئلة (Assignments) - تم تحسين الوضوح وعرض الحالة
-elif menu == "📋 الواجبات والتكاليف (Assignments)":
-    st.title("📋 الواجبات والتكاليف المطلوبة")
-    st.markdown("كل واجب مرفوع من قبل الأدمن يظهر بوضوح أدناه مع ملف الأسئلة وتاريخ النشر. يمكنك رفع حل الواجب واستعراض حالة التسليم.")
+# 3. قسم الـ Assignments (الأسامينتس)
+elif menu == "📋 Assignments (الأسامينتس)":
+    st.title("📋 Assignments المتاحة والتكاليف")
+    st.markdown("كل Assignment مرفوع من قبل الأدمن يظهر بوضوح أدناه مع ملف الأسئلة وتاريخ النشر. يمكنك رفع حل الـ Assignment واستعراض حالة التسليم.")
     st.divider()
     
     if os.path.exists("assignments.csv"):
@@ -212,7 +212,7 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
             df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", on_bad_lines="skip")
             df_asg.columns = df_asg.columns.str.strip()
             
-            # جلب الحلول السابقة للمتأكد من حالة التسليم
+            # جلب الحلول السابقة للتأكد من حالة التسليم
             submitted_asgs = []
             sub_db = "submissions.csv"
             if os.path.exists(sub_db):
@@ -228,28 +228,28 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
                     asg_deadline = row.get('الديدلاين', 'غير محدد')
                     asg_file = row.get('مسار_ملف_الأسئلة')
 
-                    # التحقق مما إذا كان الطالب قد رفع هذا الواجب من قبل
+                    # التحقق مما إذا كان الطالب قد رفع هذا الـ Assignment من قبل
                     is_submitted = asg_title in submitted_asgs
 
-                    # بطاقة عرض الواجب بشكل واضح
+                    # بطاقة عرض الـ Assignment بشكل واضح
                     st.markdown(f"""
                         <div class="assignment-card">
-                            <h3 style="color: #0d6efd; margin-top: 0;">📌 الواجب: {asg_title}</h3>
-                            <p style="color: #dc3545; font-weight: bold; margin-bottom: 5px;">⏰ موعد التسليم النهائي (الديدلاين): {asg_deadline}</p>
+                            <h3 style="color: #0d6efd; margin-top: 0;">📌 Assignment: {asg_title}</h3>
+                            <p style="color: #dc3545; font-weight: bold; margin-bottom: 5px;">⏰ موعد التسليم النهائي (Deadline): {asg_deadline}</p>
                             <p style="color: #6c757d; font-size: 13px;">تاريخ النشر: {asg_date}</p>
                         </div>
                     """, unsafe_allow_html=True)
 
                     if is_submitted:
-                        st.success("✔️ **حالة الواجب: تم رفع الحل وتسليمه للأدمن بنجاح!** يمكنك رفع حل جديد للاستبدال إذا رغبت.")
+                        st.success("✔️ **حالة الـ Assignment: تم رفع الحل وتسليمه للأدمن بنجاح!** يمكنك رفع حل جديد للاستبدال إذا رغبت.")
                     else:
-                        st.warning("⚠️ **حالة الواجب: لم تقم برفع الحل بعد (في انتظار التسليم).**")
+                        st.warning("⚠️ **حالة الـ Assignment: لم تقم برفع الحل بعد (في انتظار التسليم).**")
 
                     # تحميل ملف الأسئلة لو وجد
                     if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
                         with open(asg_file, "rb") as af:
                             st.download_button(
-                                label="📥 تحميل ملف أسئلة الواجب (PDF)",
+                                label="📥 تحميل ملف أسئلة الـ Assignment (PDF)",
                                 data=af,
                                 file_name=os.path.basename(asg_file),
                                 key=f"dl_asg_{index}"
@@ -257,7 +257,7 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
                     
                     # نموذج رفع الحل
                     with st.form(f"submit_form_{index}"):
-                        uploaded_ans = st.file_uploader("📤 رفـع ملف حل الواجب (PDF أو صور أو كود):", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
+                        uploaded_ans = st.file_uploader("📤 رفـع ملف حل الـ Assignment (PDF أو صور أو كود):", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
                         submit_ans = st.form_submit_button("إرسال الحل وتسليمه للأدمن")
                         
                         if submit_ans:
@@ -273,7 +273,7 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
                                     df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
                                     df_s_old.columns = df_s_old.columns.str.strip()
                                     for _, r in df_s_old.iterrows():
-                                        # استبعاد الحل القديم لنفس الواجب لتجنب التكرار وحفظ أحدث حل
+                                        # استبعاد الحل القديم لنفس الـ Assignment لتجنب التكرار وحفظ أحدث حل
                                         if not (str(r.get('اسم_المستخدم')).strip() == str(st.session_state.username) and str(r.get('عنوان_الواجب')).strip() == asg_title):
                                             sub_records.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('عنوان_الواجب'), r.get('مسار_ملف_الحل'), r.get('التاريخ')])
                                 
@@ -284,17 +284,17 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
                                     w.writerow(["اسم_المتدرب", "اسم_المستخدم", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
                                     w.writerows(sub_records)
                                 
-                                st.success("🎉 تم رفع وتسجيل حل الواجب بنجاح تام! سيراه الأدمن في لوحة التحكم.")
+                                st.success("🎉 تم رفع وتسجيل حل الـ Assignment بنجاح تام! سيراه الأدمن في لوحة التحكم.")
                                 st.rerun()
                             else:
                                 st.warning("الرجاء اختيار ملف الحل قبل النقر على زر الإرسال.")
                     st.write("---")
             else:
-                st.info("لا توجد واجبات منشورة حتى الآن من قبل الأدمن.")
+                st.info("لا توجد Assignments منشورة حتى الآن من قبل الأدمن.")
         except Exception as e:
-            st.error(f"حدث خطأ أثناء قراءة الواجبات: {e}")
+            st.error(f"حدث خطأ أثناء قراءة الـ Assignments: {e}")
     else:
-        st.info("لا توجد ملفات واجبات مسجلة حالياً.")
+        st.info("لا توجد ملفات Assignments مسجلة حالياً.")
 
 # 4. قسم الملف الشخصي وتغيير البيانات وكلمة المرور
 elif menu == "⚙️ الملف الشخصي وتقييمي":
