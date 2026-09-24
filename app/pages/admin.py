@@ -10,15 +10,39 @@ ADMINS_FILE = "admins.csv"
 STUDENTS_FILE = "students.csv"
 GRADUATES_FILE = "graduates.csv"
 
-# تهيئة الملفات إذا لم تكن موجودة
+# --- التحقق من صحة الملفات والأعمدة وتحديثها تلقائياً لتجنب KeyError ---
+if os.path.exists(ADMINS_FILE):
+    try:
+        df_check = pd.read_csv(ADMINS_FILE)
+        if not all(col in df_check.columns for col, type in [("username", str), ("password", str), ("name", str), ("avatar", str)]):
+            raise Exception("Missing columns")
+    except:
+        os.remove(ADMINS_FILE)
+
 if not os.path.exists(ADMINS_FILE):
     df_default_admin = pd.DataFrame([
         {"username": "admin", "password": "123", "name": "المدير الرئيسي", "avatar": ""}
     ])
     df_default_admin.to_csv(ADMINS_FILE, index=False)
 
+if os.path.exists(STUDENTS_FILE):
+    try:
+        df_check = pd.read_csv(STUDENTS_FILE)
+        if not all(col in df_check.columns for col in ["name", "email", "phone", "diploma", "status"]):
+            raise Exception("Missing columns")
+    except:
+        os.remove(STUDENTS_FILE)
+
 if not os.path.exists(STUDENTS_FILE):
     pd.DataFrame(columns=["name", "email", "phone", "diploma", "status"]).to_csv(STUDENTS_FILE, index=False)
+
+if os.path.exists(GRADUATES_FILE):
+    try:
+        df_check = pd.read_csv(GRADUATES_FILE)
+        if not all(col in df_check.columns for col in ["name", "email", "phone", "diploma", "graduation_date"]):
+            raise Exception("Missing columns")
+    except:
+        os.remove(GRADUATES_FILE)
 
 if not os.path.exists(GRADUATES_FILE):
     pd.DataFrame(columns=["name", "email", "phone", "diploma", "graduation_date"]).to_csv(GRADUATES_FILE, index=False)
