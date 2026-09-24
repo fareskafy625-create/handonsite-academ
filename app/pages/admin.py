@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from PIL import Image
 
 # إعدادات الصفحة
 st.set_page_config(page_title="HandsOnSite - لوحة تحكم الأدمن", layout="wide")
@@ -103,7 +102,7 @@ else:
                     # حذف الطالب من قائمة الحاليين
                     students_df = students_df.drop(idx)
                     students_df.to_csv(STUDENTS_FILE, index=False)
-                    st.success(تم نقل الطالب {row['name']} إلى قائمة الخريجين بنجاح!)
+                    st.success(f"تم نقل الطالب {row['name']} إلى قائمة الخريجين بنجاح!")
                     st.rerun()
         else:
             st.info("لا يوجد طلاب مسجلين حالياً.")
@@ -120,7 +119,7 @@ else:
             
             st.dataframe(grads_df, use_container_width=True)
             
-            # زر لتحميل البيانات كملف CSV لو احتجتهم في Excel
+            # زر لتحميل البيانات كملف CSV
             csv_data = grads_df.to_csv(index=False).encode('utf-8')
             st.download_button("تحميل قائمة الخريجين (CSV)", data=csv_data, file_name="graduates.csv", mime="text/csv")
         else:
