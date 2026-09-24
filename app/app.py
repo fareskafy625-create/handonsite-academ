@@ -36,6 +36,14 @@ st.markdown("""
         background-color: #0b5ed7; 
         color: white; 
     }
+    .assignment-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        border-right: 5px solid #0d6efd;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -110,10 +118,16 @@ df_prof = pd.read_csv(profile_db, encoding="utf-8-sig", on_bad_lines="skip")
 user_prof_row = df_prof[df_prof['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)]
 
 current_avatar = ""
-current_eval = "ممتاز (تحت المراجعة)"
+current_eval = "ممتاز"
+improvement_notes = "لا توجد ملاحظات إصلاحية حالياً. استمر في التميز!"
 if not user_prof_row.empty:
     current_avatar = str(user_prof_row.iloc[0].get('الصورة_الشخصية', ''))
-    current_eval = str(user_prof_row.iloc[0].get('التقييم', 'ممتاز (تحت المراجعة)'))
+    val_eval = str(user_prof_row.iloc[0].get('التقييم', ''))
+    if val_eval != "nan" and val_eval.strip() != "":
+        current_eval = val_eval
+    val_notes = str(user_prof_row.iloc[0].get('نبذة', ''))
+    if val_notes != "nan" and val_notes.strip() != "":
+        improvement_notes = val_notes
 
 # عرض الصورة الشخصية في القائمة الجانبية إن وجدت
 if pd.notna(current_avatar) and os.path.exists(current_avatar):
@@ -187,22 +201,51 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الواجبات والأسئلة (Assignments)
+# 3. قسم الواجبات والأسئلة (Assignments) - تم تحسين الوضوح وعرض الحالة
 elif menu == "📋 الواجبات والتكاليف (Assignments)":
     st.title("📋 الواجبات والتكاليف المطلوبة")
-    st.markdown("قم بالاطلاع على الواجبات المنشورة، تحميل ملف الأسئلة، ورفع حل الواجب الخاص بك بسهولة.")
+    st.markdown("كل واجب مرفوع من قبل الأدمن يظهر بوضوح أدناه مع ملف الأسئلة وتاريخ النشر. يمكنك رفع حل الواجب واستعراض حالة التسليم.")
     st.divider()
     
     if os.path.exists("assignments.csv"):
         try:
             df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", on_bad_lines="skip")
+            df_asg.columns = df_asg.columns.str.strip()
+            
+            # جلب الحلول السابقة للمتأكد من حالة التسليم
+            submitted_asgs = []
+            sub_db = "submissions.csv"
+            if os.path.exists(sub_db):
+                df_subs_check = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
+                df_subs_check.columns = df_subs_check.columns.str.strip()
+                my_subs = df_subs_check[df_subs_check['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)]
+                submitted_asgs = my_subs['عنوان_الواجب'].astype(str).str.strip().tolist()
+
             if not df_asg.empty:
                 for index, row in df_asg.iterrows():
-                    st.subheader(f"📌 {row.get('العنوان', '')}")
-                    st.write(f"**التعليمات:** {row.get('الوصف', '')}")
-                    st.write(f"*تاريخ النشر: {row.get('التاريخ', '')}*")
-                    
+                    asg_title = str(row.get('العنوان', '')).strip()
+                    asg_date = row.get('التاريخ', '')
+                    asg_deadline = row.get('الديدلاين', 'غير محدد')
                     asg_file = row.get('مسار_ملف_الأسئلة')
+
+                    # التحقق مما إذا كان الطالب قد رفع هذا الواجب من قبل
+                    is_submitted = asg_title in submitted_asgs
+
+                    # بطاقة عرض الواجب بشكل واضح
+                    st.markdown(f"""
+                        <div class="assignment-card">
+                            <h3 style="color: #0d6efd; margin-top: 0;">📌 الواجب: {asg_title}</h3>
+                            <p style="color: #dc3545; font-weight: bold; margin-bottom: 5px;">⏰ موعد التسليم النهائي (الديدلاين): {asg_deadline}</p>
+                            <p style="color: #6c757d; font-size: 13px;">تاريخ النشر: {asg_date}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    if is_submitted:
+                        st.success("✔️ **حالة الواجب: تم رفع الحل وتسليمه للأدمن بنجاح!** يمكنك رفع حل جديد للاستبدال إذا رغبت.")
+                    else:
+                        st.warning("⚠️ **حالة الواجب: لم تقم برفع الحل بعد (في انتظار التسليم).**")
+
+                    # تحميل ملف الأسئلة لو وجد
                     if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
                         with open(asg_file, "rb") as af:
                             st.download_button(
@@ -212,28 +255,39 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
                                 key=f"dl_asg_{index}"
                             )
                     
+                    # نموذج رفع الحل
                     with st.form(f"submit_form_{index}"):
-                        uploaded_ans = st.file_uploader("رفـع ملف حل الواجب (PDF أو صور):", type=["pdf", "png", "jpg", "zip"], key=f"ans_{index}")
-                        submit_ans = st.form_submit_button("إرسال الحل للأدمن")
+                        uploaded_ans = st.file_uploader("📤 رفـع ملف حل الواجب (PDF أو صور أو كود):", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
+                        submit_ans = st.form_submit_button("إرسال الحل وتسليمه للأدمن")
                         
                         if submit_ans:
                             if uploaded_ans is not None:
-                                ans_filename = f"sub_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_ans.name}"
+                                ans_filename = f"sub_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_ans.name}"
                                 ans_path_str = os.path.join("uploads", ans_filename)
                                 with open(ans_path_str, "wb") as sf:
                                     sf.write(uploaded_ans.getbuffer())
                                 
-                                sub_db = "submissions.csv"
                                 sub_exists = os.path.exists(sub_db)
-                                with open(sub_db, mode="a", encoding="utf-8-sig", newline="") as sf_csv:
-                                    w = csv.writer(sf_csv)
-                                    if not sub_exists:
-                                        w.writerow(["اسم_المتدرب", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
-                                    w.writerow([st.session_state.current_user, row.get('العنوان'), ans_path_str, datetime.now().strftime("%Y-%m-%d")])
+                                sub_records = []
+                                if sub_exists:
+                                    df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
+                                    df_s_old.columns = df_s_old.columns.str.strip()
+                                    for _, r in df_s_old.iterrows():
+                                        # استبعاد الحل القديم لنفس الواجب لتجنب التكرار وحفظ أحدث حل
+                                        if not (str(r.get('اسم_المستخدم')).strip() == str(st.session_state.username) and str(r.get('عنوان_الواجب')).strip() == asg_title):
+                                            sub_records.append([r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('عنوان_الواجب'), r.get('مسار_ملف_الحل'), r.get('التاريخ')])
                                 
-                                st.success("تم إرسال حل الواجب بنجاح وسيراه الأدمن في لوحة التحكم!")
+                                sub_records.append([st.session_state.current_user, st.session_state.username, asg_title, ans_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+
+                                with open(sub_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
+                                    w = csv.writer(sf_csv)
+                                    w.writerow(["اسم_المتدرب", "اسم_المستخدم", "عنوان_الواجب", "مسار_ملف_الحل", "التاريخ"])
+                                    w.writerows(sub_records)
+                                
+                                st.success("🎉 تم رفع وتسجيل حل الواجب بنجاح تام! سيراه الأدمن في لوحة التحكم.")
+                                st.rerun()
                             else:
-                                st.warning("الرجاء اختيار ملف الحل قبل الإرسال.")
+                                st.warning("الرجاء اختيار ملف الحل قبل النقر على زر الإرسال.")
                     st.write("---")
             else:
                 st.info("لا توجد واجبات منشورة حتى الآن من قبل الأدمن.")
@@ -245,7 +299,7 @@ elif menu == "📋 الواجبات والتكاليف (Assignments)":
 # 4. قسم الملف الشخصي وتغيير البيانات وكلمة المرور
 elif menu == "⚙️ الملف الشخصي وتقييمي":
     st.title("⚙️ الملف الشخصي وتقييم الأداء")
-    st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك في الأكاديمية.")
+    st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
     st.divider()
     
     col_p1, col_p2 = st.columns([1, 2])
@@ -260,7 +314,14 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
         st.markdown("---")
         st.subheader("⭐ تقييمك الأكاديمي")
         st.metric(label="حالة التقييم العام", value=current_eval)
-        st.info("💡 يتم تحديث هذا التقييم بناءً على أداءك وتسليمك للواجبات.")
+        
+        # عرض ملاحظات الإصلاح والتوجيهات التي كتبها الأدمن
+        st.markdown(f"""
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; margin-top: 15px;">
+                <h4 style="color: #856404; margin-top: 0; font-size: 15px;">📌 ملاحظات وتوجيهات المدرب لحل المشاكل:</h4>
+                <p style="color: #533f03; font-size: 14px; line-height: 1.5; margin-bottom: 0;">{improvement_notes}</p>
+            </div>
+        """, unsafe_allow_html=True)
 
     with col_p2:
         st.subheader("✏️ تعديل البيانات الشخصية وكلمة المرور")
@@ -300,7 +361,7 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                         if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username):
                             profiles_list.append([r.get('اسم_المستخدم'), r.get('الصورة_الشخصية'), r.get('التقييم'), r.get('نبذة')])
                 
-                profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, ""])
+                profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
                 
                 with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
                     w_p = csv.writer(f_p)
