@@ -196,7 +196,7 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
     st.divider()
 
     # شريط البحث السريع للوصول للطالب المراد تسجيله
-    att_search_query = st.text_input("🔍 شريط البحث السريع (اكتب اسم الطالب لتصفيته أو اتركه فارغاً لعرض الكل):", "").strip()
+    att_search_query = st.text_input("🔍 :", "").strip()
 
     if os.path.exists(users_db):
         try:
