@@ -293,7 +293,7 @@ elif menu == "📋 Assignments (الأسامينتس)":
     else:
         st.info("لا توجد ملفات Assignments مسجلة حالياً.")
 
-# 4. قسم الملف الشخصي وتغيير البيانات (مع تفريغ الخانات وإظهار رسالة النجاح)
+# 4. قسم الملف الشخصي وتغيير البيانات (محدث بحيث يتم اعتماد Username الثابت للتعديل وإفراغ الخانات بعد الحفظ)
 elif menu == "⚙️ الملف الشخصي وتقييمي":
     st.title("⚙️ الملف الشخصي وتقييم الأداء")
     st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
@@ -323,7 +323,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
         st.subheader("✏️ تعديل البيانات الشخصية وكلمة المرور")
         
         with st.form("update_profile_form", clear_on_submit=True):
-            # ترك خانة الاسم فارغة ليقوم الطالب بكتابة الاسم الجديد أو تركت هكذا لتفريغ الحقول بعد الحفظ
             new_name_input = st.text_input("تعديل الاسم الجديد:")
             new_password_input = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
             new_avatar_file = st.file_uploader("اختر صورة شخصية جديدة (JPG/PNG):", type=["jpg", "jpeg", "png"])
@@ -331,7 +330,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
             submit_update = st.form_submit_button("حفظ جميع التعديلات")
             
             if submit_update:
-                # التحقق إذا قام الطالب بإدخال اسم أو كلمة مرور جديدة أو صورة
                 if new_name_input.strip() or new_password_input.strip() or new_avatar_file is not None:
                     saved_avatar_path = current_avatar
                     if new_avatar_file is not None:
@@ -343,7 +341,7 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                     if new_name_input.strip():
                         st.session_state.current_user = new_name_input.strip()
                     
-                    # تحديث جدول المستخدمين بشكل آمن 100%
+                    # تحديث جدول المستخدمين بالاعتماد على اسم المستخدم الثابت (Username) لمنع أي خطأ
                     if os.path.exists("users.csv"):
                         df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                         df_u.columns = df_u.columns.str.strip()
@@ -376,7 +374,6 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                         w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
                         w_p.writerows(profiles_list)
                     
-                    # إظهار رسالة النجاح وتفريغ الخانات تلقائياً بفضل clear_on_submit=True والـ rerun
                     st.success("✅ تم تعديل البيانات بالفعل!")
                     st.rerun()
                 else:
