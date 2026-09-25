@@ -129,7 +129,6 @@ menu_options = [
 
 # رسم أزرار القائمة الجانبية بشكل شيك ومنظم
 for option in menu_options:
-    # تمييز الزر الحالي بلون مختلف ليعرف المستخدم الصفحة التي هو فيها
     is_current = (st.session_state.admin_page == option)
     btn_type = "primary" if is_current else "secondary"
     
@@ -206,7 +205,7 @@ if admin_menu == "📅 جداول مواعيد المجموعات (Groups)":
         except Exception as e:
             st.error(f"خطأ: {e}")
 
-# 2. تسجيل حضور وغياب الطلاب (عرض الكل + شريط بحث سريع + زر إضافة لكل طالب)
+# 2. تسجيل حضور وغياب الطلاب
 elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
     st.subheader("✅ تسجيل حضور وغياب الطلاب")
     st.markdown("حدد التاريخ وعنوان المحاضرة بالأعلى. يمكنك استعراض الطلاب أو استخدام شريط البحث للوصول السريع للطالب، ثم حدد حالته واضغط على زر (إضافة الحضور) الخاص به.")
@@ -219,7 +218,6 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
 
     st.divider()
 
-    # شريط البحث السريع للوصول للطالب المراد تسجيله
     att_search_query = st.text_input("🔍 شريط البحث السريع (اكتب اسم الطالب لتصفيته أو اتركه فارغاً لعرض الكل):", "").strip()
 
     if os.path.exists(users_db):
@@ -228,7 +226,6 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
             df_users.columns = df_users.columns.str.strip()
             
             if not df_users.empty:
-                # تصفية الطلاب بناءً على شريط البحث إذا تم كتابة شيء، وإلا عرض الكل
                 if att_search_query:
                     df_filtered_attendance = df_users[
                         df_users['اسم_المتدرب'].astype(str).str.contains(att_search_query, case=False, na=False) | 
@@ -263,10 +260,7 @@ elif admin_menu == "✅ تسجيل حضور وغياب الطلاب":
                                         for _, r in df_att_old.iterrows():
                                             att_records.append([r.get('التاريخ'), r.get('عنوان_المحاضرة'), r.get('اسم_المتدرب'), r.get('اسم_المستخدم'), r.get('الحالة')])
                                     
-                                    # إزالة أي سجل قديم لنفس الطالب في نفس التاريخ لتحديث حالته بدقة
                                     att_records = [r for r in att_records if not (str(r[0]) == str(att_date) and str(r[3]).strip() == str(u_user).strip())]
-                                    
-                                    # إضافة سجل الطالب المحدد فقط
                                     att_records.append([str(att_date), lecture_title_input.strip(), u_name, u_user, status_choice])
                                     
                                     with open(attendance_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
@@ -493,7 +487,7 @@ elif admin_menu == "🎓 خريجي التدريب (سجل الخريجين)":
                     w_g.writerows(grad_records)
                 st.success(f"تم حفظ الخريج ({grad_name}) بنجاح!")
 
-# 6. إدارة المدربين والأدمن وتغيير الباسورد
+# 6. إدارة المدربين والأدمن وتغيير الباسورد (تم تأمينه بالكامل لمنع الـ TypeError)
 elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير الباسورد":
     st.subheader("🔑 إدارة حسابات المدربين (الأدمن)")
     col_adm1, col_adm2 = st.columns(2)
@@ -538,25 +532,36 @@ elif admin_menu == "🔑 إدارة المدربين والأدمن وتغيير
                             df_change = pd.read_csv(admins_db, encoding="utf-8-sig", on_bad_lines="skip")
                             df_change.columns = df_change.columns.str.strip()
                             current_uname = st.session_state.get('admin_username', '')
-                            user_row = df_change[df_change['اسم_المستخدم'].astype(str).str.strip() == current_uname]
-                            if not user_row.empty and str(user_row.iloc[0]['كلمة_المرور']).strip() == old_pass_input.strip():
-                                updated_admins = []
-                                for _, r in df_change.iterrows():
-                                    uname = str(r.get('اسم_المستخدم')).strip()
-                                    upass = str(r.get('كلمة_المرور')).strip()
-                                    uname_full = str(r.get('اسم_المدرب')).strip()
-                                    if uname == current_uname:
-                                        upass = new_pass_input.strip()
-                                    updated_admins.append([uname, upass, uname_full])
-                                with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_up:
-                                    w_up = csv.writer(f_up)
-                                    w_up.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
-                                    w_up.writerows(updated_admins)
-                                st.success("تم تغيير كلمة المرور بنجاح!")
+                            
+                            # البحث الآمن عن المستخدم
+                            user_row = df_change[df_change['اسم_المستخدم'].astype(str).str.strip() == str(current_uname).strip()]
+                            
+                            # التأكد الآمن من كلمة المرور باستخدام str() و pd.notna لمنع أي TypeError
+                            if not user_row.empty:
+                                db_pass = str(user_row.iloc[0].get('كلمة_المرور', '')).strip()
+                                input_old_pass = str(old_pass_input).strip()
+                                
+                                if db_pass == input_old_pass:
+                                    updated_admins = []
+                                    for _, r in df_change.iterrows():
+                                        uname = str(r.get('اسم_المستخدم', '')).strip()
+                                        upass = str(r.get('كلمة_المرور', '')).strip()
+                                        uname_full = str(r.get('اسم_المدرب', '')).strip()
+                                        if uname == str(current_uname).strip():
+                                            upass = new_pass_input.strip()
+                                        updated_admins.append([uname, upass, uname_full])
+                                        
+                                    with open(admins_db, mode="w", encoding="utf-8-sig", newline="") as f_up:
+                                        w_up = csv.writer(f_up)
+                                        w_up.writerow(["اسم_المستخدم", "كلمة_المرور", "اسم_المدرب"])
+                                        w_up.writerows(updated_admins)
+                                    st.success("تم تغيير كلمة المرور بنجاح!")
+                                else:
+                                    st.error("كلمة المرور الحالية غير صحيحة.")
                             else:
-                                st.error("كلمة المرور الحالية غير صحيحة.")
+                                st.error("لم يتم العثور على بيانات المستخدم الحالي.")
                         except Exception as e:
-                            st.error(f"خطأ: {e}")
+                            st.error(f"حدث خطأ أثناء التحديث: {e}")
 
 # 7. نشر الإعلانات والأخبار
 elif admin_menu == "📢 نشر الإعلانات والأخبار":
