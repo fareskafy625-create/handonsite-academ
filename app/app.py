@@ -36,7 +36,7 @@ st.markdown("""
 
 os.makedirs("uploads", exist_ok=True)
 
-# نظام تسجيل الدخول (يبحث الآن بالاسم المتغير "اسم_المتدرب" أو "اسم_المستخدم" ليدخل بالاسم الجديد فوراً)
+# نظام تسجيل الدخول
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -54,38 +54,33 @@ if not st.session_state.logged_in:
         
         with st.form("login_form"):
             st.markdown("🔒 **يرجى إدخال بيانات الحساب الخاص بك**")
-            input_name_or_user = st.text_input("اسم المستخدم أو اسمك الكامل:")
+            username = st.text_input("اسم المستخدم (Username):")
             password = st.text_input("كلمة المرور (Password):", type="password")
             
             submit_login = st.form_submit_button("تسجيل الدخول")
             
             if submit_login:
-                if input_name_or_user and password:
+                if username and password:
                     if os.path.exists("users.csv"):
                         try:
                             df_users = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                             df_users.columns = df_users.columns.str.strip()
                             
-                            # التحقق سواء بالاسم الجديد (اسم_المتدرب) أو اسم المستخدم الأساسي (اسم_المستخدم)
                             user_match = df_users[
-                                (
-                                    (df_users['اسم_المستخدم'].str.strip() == input_name_or_user.strip()) | 
-                                    (df_users['اسم_المتدرب'].str.strip() == input_name_or_user.strip())
-                                ) & 
+                                (df_users['اسم_المستخدم'].str.strip() == username.strip()) & 
                                 (df_users['كلمة_المرور'].str.strip() == password.strip())
                             ]
                             
                             if not user_match.empty:
                                 st.session_state.logged_in = True
-                                # حفظ الهوية الحقيقية الثابتة خلف الكواليس لتحديث البيانات لاحقاً
-                                st.session_state.username = user_match.iloc[0]['اسم_المستخدم'].strip()
-                                st.session_state.current_user = user_match.iloc[0]['اسم_المتدرب'].strip()
+                                st.session_state.username = username.strip()
+                                st.session_state.current_user = user_match.iloc[0]['اسم_المتدرب']
                                 st.session_state.user_track = user_match.iloc[0]['المسار']
                                 st.session_state.active_page = "📢 الإعلانات والأخبار"
                                 st.success("تم تسجيل الدخول بنجاح! جاري تحويلك...")
                                 st.rerun()
                             else:
-                                st.error("خطأ: اسم المستخدم (أو الاسم) أو كلمة المرور غير صحيحة.")
+                                st.error("خطأ: اسم المستخدم أو كلمة المرور غير صحيحة.")
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء قراءة ملف المستخدمين: {e}")
                     else:
@@ -297,10 +292,10 @@ elif menu == "📋 Assignments (الأسامينتس)":
     else:
         st.info("لا توجد ملفات Assignments مسجلة حالياً.")
 
-# 4. قسم الملف الشخصي وتغيير البيانات (يحدث الاسم واليوزر معاً ليدخل بالاسم الجديد مباشرة)
+# 4. قسم الملف الشخصي وتغيير البيانات (محدث ليغير اسم اليوزر الأساسي واسم المتدرب معاً)
 elif menu == "⚙️ الملف الشخصي وتقييمي":
     st.title("⚙️ الملف الشخصي وتقييم الأداء")
-    st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
+    st.markdown("يمكنك هنا تعديل اسمك اليوزر، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
     st.divider()
     
     col_p1, col_p2 = st.columns([1, 2])
@@ -324,10 +319,10 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
         """, unsafe_allow_html=True)
 
     with col_p2:
-        st.subheader("✏️ تعديل البيانات الشخصية وكلمة المرور")
+        st.subheader("✏️ تعديل اسم المستخدم (Username) وكلمة المرور")
         
         with st.form("update_profile_form", clear_on_submit=True):
-            new_name_input = st.text_input("تعديل الاسم الجديد (سواء عربي أو إنجليزي):")
+            new_name_input = st.text_input("تعديل اسم المستخدم الجديد (Username):")
             new_password_input = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
             new_avatar_file = st.file_uploader("اختر صورة شخصية جديدة (JPG/PNG):", type=["jpg", "jpeg", "png"])
             
@@ -342,15 +337,15 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                         with open(saved_avatar_path, "wb") as av_f:
                             av_f.write(new_avatar_file.getbuffer())
                     
-                    if new_name_input.strip():
-                        st.session_state.current_user = new_name_input.strip()
+                    old_username = str(st.session_state.username).strip()
+                    new_username = str(new_name_input).strip() if new_name_input.strip() else old_username
                     
-                    # تحديث جدول المستخدمين (تحديث كل من اسم المستخدم واسم المتدرب ليتمكن من الدخول بالاسم الجديد)
+                    # تحديث جدول المستخدمين (users.csv) ليتغير الـ Username واسم المتدرب معاً
                     if os.path.exists("users.csv"):
                         df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                         df_u.columns = df_u.columns.str.strip()
                         
-                        mask = df_u['اسم_المستخدم'].str.strip() == str(st.session_state.username).strip()
+                        mask = df_u['اسم_المستخدم'].str.strip() == old_username
                         
                         if mask.any():
                             df_u['كلمة_المرور'] = df_u['كلمة_المرور'].astype(str)
@@ -358,23 +353,23 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                             df_u['اسم_المستخدم'] = df_u['اسم_المستخدم'].astype(str)
                             
                             if new_name_input.strip():
-                                new_clean_name = str(new_name_input).strip()
-                                df_u.loc[mask, 'اسم_المتدرب'] = new_clean_name
-                                # تحديث اسم المستخدم أيضاً ليصبح هو الاسم الجديد الذي كتبه الطالب
-                                df_u.loc[mask, 'اسم_المستخدم'] = new_clean_name
-                                st.session_state.username = new_clean_name
+                                df_u.loc[mask, 'اسم_المستخدم'] = new_username
+                                df_u.loc[mask, 'اسم_المتدرب'] = new_username
+                                st.session_state.username = new_username
+                                st.session_state.current_user = new_username
                                 
                             if new_password_input.strip():
                                 df_u.loc[mask, 'كلمة_المرور'] = str(new_password_input).strip()
                                 
                             df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
                     
+                    # تحديث جدول البروفايلات (profiles.csv) ليتوافق مع اليوزر الجديد
                     profiles_list = []
                     if os.path.exists(profile_db):
                         df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                         df_p_old.columns = df_p_old.columns.str.strip()
                         for _, r in df_p_old.iterrows():
-                            if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username).strip():
+                            if str(r.get('اسم_المستخدم')).strip() != old_username:
                                 profiles_list.append([r.get('اسم_المستخدم'), r.get('الصورة_الشخصية'), r.get('التقييم'), r.get('نبذة')])
                     
                     profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
@@ -384,7 +379,7 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                         w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
                         w_p.writerows(profiles_list)
                     
-                    st.success("✅ تم تعديل الاسم والبيانات بنجاح! يمكنك الآن تسجيل الدخول بالاسم الجديد.")
+                    st.success("✅ تم تغيير اسم المستخدم (Username) والبيانات بنجاح وتحديثها في لوحة الأدمن!")
                     st.rerun()
                 else:
                     st.warning("⚠️ يرجى إدخال البيانات المراد تعديلها أولاً.")
