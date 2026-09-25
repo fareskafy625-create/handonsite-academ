@@ -12,7 +12,6 @@ st.markdown("""
     <style>
     .main { background-color: #f4f6f9; }
     
-    /* تصميم أزرار القائمة الجانبية لتكون بشكل مربعات وأزرار احترافية */
     div.stButton > button {
         width: 100%;
         border-radius: 10px;
@@ -32,15 +31,6 @@ st.markdown("""
         color: white; 
         border-color: #0d6efd;
         transform: translateY(-2px);
-    }
-    
-    .assignment-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        border-right: 4px solid #0d6efd;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,7 +64,6 @@ if not st.session_state.logged_in:
                 if username and password:
                     if os.path.exists("users.csv"):
                         try:
-                            # قراءة البيانات كـ string لضمان السلامة التامة
                             df_users = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                             df_users.columns = df_users.columns.str.strip()
                             
@@ -99,19 +88,12 @@ if not st.session_state.logged_in:
                         st.error("لا توجد حسابات مفعلة في النظام حالياً. يرجى مراجعة الأدمن.")
                 else:
                     st.warning("الرجاء إدخال اسم المستخدم وكلمة المرور.")
-        
-        st.markdown("""
-            <div style="text-align: center; margin-top: 15px;">
-                <p style="color: #adb5bd; font-size: 13px;">إذا لم يكن لديك حساب، يرجى التواصل مع إدارة الأكاديمية.</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
     st.stop()
 
 if 'active_page' not in st.session_state:
     st.session_state.active_page = "📢 الإعلانات والأخبار"
 
-# قراءة بيانات الملف الشخصي والتقييمات بشكل آمن تماماً
+# قراءة بيانات الملف الشخصي
 profile_db = "profiles.csv"
 if not os.path.exists(profile_db):
     with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f:
@@ -134,7 +116,7 @@ if not user_prof_row.empty:
     if val_notes != "nan" and val_notes.strip() != "":
         improvement_notes = val_notes
 
-# القائمة الجانبية الاحترافية
+# القائمة الجانبية
 if pd.notna(current_avatar) and os.path.exists(current_avatar):
     st.sidebar.image(current_avatar, width=120)
 
@@ -222,7 +204,7 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الـ Assignments (الأسامينتس)
+# 3. قسم الـ Assignments
 elif menu == "📋 Assignments (الأسامينتس)":
     st.title("📋 Assignments المتاحة والتكاليف")
     st.markdown("يمكنك الاطلاع على الـ Assignments، تحميل ملف الأسئلة، ورفع الحلول الخاصة بك بسهولة.")
@@ -311,7 +293,7 @@ elif menu == "📋 Assignments (الأسامينتس)":
     else:
         st.info("لا توجد ملفات Assignments مسجلة حالياً.")
 
-# 4. قسم الملف الشخصي وتغيير البيانات وكلمة المرور (مؤمن بالكامل ضد LossySetitemError)
+# 4. قسم الملف الشخصي وتغيير البيانات (مع تفريغ الخانات وإظهار رسالة النجاح)
 elif menu == "⚙️ الملف الشخصي وتقييمي":
     st.title("⚙️ الملف الشخصي وتقييم الأداء")
     st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
@@ -339,55 +321,63 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
 
     with col_p2:
         st.subheader("✏️ تعديل البيانات الشخصية وكلمة المرور")
-        with st.form("update_profile_form"):
-            new_name_input = st.text_input("تعديل الاسم:", value=st.session_state.current_user)
+        
+        with st.form("update_profile_form", clear_on_submit=True):
+            # ترك خانة الاسم فارغة ليقوم الطالب بكتابة الاسم الجديد أو تركت هكذا لتفريغ الحقول بعد الحفظ
+            new_name_input = st.text_input("تعديل الاسم الجديد:")
             new_password_input = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
             new_avatar_file = st.file_uploader("اختر صورة شخصية جديدة (JPG/PNG):", type=["jpg", "jpeg", "png"])
             
             submit_update = st.form_submit_button("حفظ جميع التعديلات")
             
             if submit_update:
-                saved_avatar_path = current_avatar
-                if new_avatar_file is not None:
-                    avatar_filename = f"avatar_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{new_avatar_file.name}"
-                    saved_avatar_path = os.path.join("uploads", avatar_filename)
-                    with open(saved_avatar_path, "wb") as av_f:
-                        av_f.write(new_avatar_file.getbuffer())
-                
-                st.session_state.current_user = new_name_input.strip()
-                
-                # تحديث جدول المستخدمين بشكل آمن 100% ومنع أي LossySetitemError
-                if os.path.exists("users.csv"):
-                    df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                    df_u.columns = df_u.columns.str.strip()
+                # التحقق إذا قام الطالب بإدخال اسم أو كلمة مرور جديدة أو صورة
+                if new_name_input.strip() or new_password_input.strip() or new_avatar_file is not None:
+                    saved_avatar_path = current_avatar
+                    if new_avatar_file is not None:
+                        avatar_filename = f"avatar_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{new_avatar_file.name}"
+                        saved_avatar_path = os.path.join("uploads", avatar_filename)
+                        with open(saved_avatar_path, "wb") as av_f:
+                            av_f.write(new_avatar_file.getbuffer())
                     
-                    mask = df_u['اسم_المستخدم'].str.strip() == str(st.session_state.username).strip()
+                    if new_name_input.strip():
+                        st.session_state.current_user = new_name_input.strip()
                     
-                    if mask.any():
-                        # تحويل صريح لأنواع الأعمدة لنصوص قبل التعديل
-                        df_u['كلمة_المرور'] = df_u['كلمة_المرور'].astype(str)
-                        df_u['اسم_المتدرب'] = df_u['اسم_المتدرب'].astype(str)
+                    # تحديث جدول المستخدمين بشكل آمن 100%
+                    if os.path.exists("users.csv"):
+                        df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                        df_u.columns = df_u.columns.str.strip()
                         
-                        df_u.loc[mask, 'اسم_المتدرب'] = str(new_name_input).strip()
-                        if new_password_input.strip():
-                            df_u.loc[mask, 'كلمة_المرور'] = str(new_password_input).strip()
+                        mask = df_u['اسم_المستخدم'].str.strip() == str(st.session_state.username).strip()
+                        
+                        if mask.any():
+                            df_u['كلمة_المرور'] = df_u['كلمة_المرور'].astype(str)
+                            df_u['اسم_المتدرب'] = df_u['اسم_المتدرب'].astype(str)
                             
-                        df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
-                
-                profiles_list = []
-                if os.path.exists(profile_db):
-                    df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                    df_p_old.columns = df_p_old.columns.str.strip()
-                    for _, r in df_p_old.iterrows():
-                        if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username).strip():
-                            profiles_list.append([r.get('اسم_المستخدم'), r.get('الصورة_الشخصية'), r.get('التقييم'), r.get('نبذة')])
-                
-                profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
-                
-                with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
-                    w_p = csv.writer(f_p)
-                    w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
-                    w_p.writerows(profiles_list)
-                
-                st.success("تم تحديث بياناتك الشخصية وكلمة المرور بنجاح!")
-                st.rerun()
+                            if new_name_input.strip():
+                                df_u.loc[mask, 'اسم_المتدرب'] = str(new_name_input).strip()
+                            if new_password_input.strip():
+                                df_u.loc[mask, 'كلمة_المرور'] = str(new_password_input).strip()
+                                
+                            df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
+                    
+                    profiles_list = []
+                    if os.path.exists(profile_db):
+                        df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                        df_p_old.columns = df_p_old.columns.str.strip()
+                        for _, r in df_p_old.iterrows():
+                            if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username).strip():
+                                profiles_list.append([r.get('اسم_المستخدم'), r.get('الصورة_الشخصية'), r.get('التقييم'), r.get('نبذة')])
+                    
+                    profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
+                    
+                    with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
+                        w_p = csv.writer(f_p)
+                        w_p.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
+                        w_p.writerows(profiles_list)
+                    
+                    # إظهار رسالة النجاح وتفريغ الخانات تلقائياً بفضل clear_on_submit=True والـ rerun
+                    st.success("✅ تم تعديل البيانات بالفعل!")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ يرجى إدخال البيانات المراد تعديلها أولاً.")
