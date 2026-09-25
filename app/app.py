@@ -34,16 +34,6 @@ st.markdown("""
         transform: translateY(-2px);
     }
     
-    /* زر تسجيل الخروج بلون مميز (أحمر خفيف) */
-    div.stButton.logout-btn > button {
-        border-color: #dc3545;
-        color: #dc3545;
-    }
-    div.stButton.logout-btn > button:hover {
-        background-color: #dc3545;
-        color: white;
-    }
-
     .assignment-card {
         background-color: white;
         padding: 15px;
@@ -84,11 +74,13 @@ if not st.session_state.logged_in:
                 if username and password:
                     if os.path.exists("users.csv"):
                         try:
-                            df_users = pd.read_csv("users.csv", encoding="utf-8-sig", on_bad_lines="skip")
+                            # قراءة البيانات كـ string لضمان السلامة التامة
+                            df_users = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                            df_users.columns = df_users.columns.str.strip()
                             
                             user_match = df_users[
-                                (df_users['اسم_المستخدم'].astype(str).str.strip() == username.strip()) & 
-                                (df_users['كلمة_المرور'].astype(str).str.strip() == password.strip())
+                                (df_users['اسم_المستخدم'].str.strip() == username.strip()) & 
+                                (df_users['كلمة_المرور'].str.strip() == password.strip())
                             ]
                             
                             if not user_match.empty:
@@ -96,7 +88,6 @@ if not st.session_state.logged_in:
                                 st.session_state.username = username.strip()
                                 st.session_state.current_user = user_match.iloc[0]['اسم_المتدرب']
                                 st.session_state.user_track = user_match.iloc[0]['المسار']
-                                # تعيين الصفحة الافتراضية عند الدخول
                                 st.session_state.active_page = "📢 الإعلانات والأخبار"
                                 st.success("تم تسجيل الدخول بنجاح! جاري تحويلك...")
                                 st.rerun()
@@ -117,19 +108,19 @@ if not st.session_state.logged_in:
         
     st.stop()
 
-# تتبع الصفحة الحالية في الـ Session State لتنقل الأزرار الاحترافية
 if 'active_page' not in st.session_state:
     st.session_state.active_page = "📢 الإعلانات والأخبار"
 
-# جلب أو إنشاء ملف خاص ببيانات الملف الشخصي الإضافية
+# قراءة بيانات الملف الشخصي والتقييمات بشكل آمن تماماً
 profile_db = "profiles.csv"
 if not os.path.exists(profile_db):
     with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(["اسم_المستخدم", "الصورة_الشخصية", "التقييم", "نبذة"])
 
-df_prof = pd.read_csv(profile_db, encoding="utf-8-sig", on_bad_lines="skip")
-user_prof_row = df_prof[df_prof['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)]
+df_prof = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+df_prof.columns = df_prof.columns.str.strip()
+user_prof_row = df_prof[df_prof['اسم_المستخدم'].str.strip() == str(st.session_state.username)]
 
 current_avatar = ""
 current_eval = "ممتاز"
@@ -143,7 +134,7 @@ if not user_prof_row.empty:
     if val_notes != "nan" and val_notes.strip() != "":
         improvement_notes = val_notes
 
-# تصميم القائمة الجانبية الاحترافية (مربعات وأزرار)
+# القائمة الجانبية الاحترافية
 if pd.notna(current_avatar) and os.path.exists(current_avatar):
     st.sidebar.image(current_avatar, width=120)
 
@@ -153,7 +144,6 @@ st.sidebar.divider()
 
 st.sidebar.markdown("### 🎛️ الأقسام الرئيسية:")
 
-# أزرار القائمة الجانبية الاحترافية
 if st.sidebar.button("📢 الإعلانات والأخبار"):
     st.session_state.active_page = "📢 الإعلانات والأخبار"
     st.rerun()
@@ -176,7 +166,6 @@ if st.sidebar.button("🚪 تسجيل الخروج"):
     st.session_state.logged_in = False
     st.rerun()
 
-# استدعاء الصفحة النشطة بناءً على زر القائمة الجانبية المختار
 menu = st.session_state.active_page
 
 # 1. قسم الإعلانات
@@ -187,7 +176,8 @@ if menu == "📢 الإعلانات والأخبار":
     
     if os.path.exists("announcements.csv"):
         try:
-            df_an = pd.read_csv("announcements.csv", encoding="utf-8-sig", on_bad_lines="skip")
+            df_an = pd.read_csv("announcements.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_an.columns = df_an.columns.str.strip()
             if not df_an.empty:
                 for index, row in df_an.iterrows():
                     st.info(f"### 📌 {row.get('العنوان', '')}\n\n{row.get('المحتوى', '')}\n\n*تاريخ النشر: {row.get('التاريخ', '')}*")
@@ -210,7 +200,8 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     
     if os.path.exists("lectures.csv"):
         try:
-            df_lec = pd.read_csv("lectures.csv", encoding="utf-8-sig", on_bad_lines="skip")
+            df_lec = pd.read_csv("lectures.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_lec.columns = df_lec.columns.str.strip()
             if not df_lec.empty:
                 for index, row in df_lec.iterrows():
                     st.write(f"- **المسار:** {row.get('المسار')} | **المحاضرة:** {row.get('عنوان_المحاضرة')}")
@@ -231,7 +222,7 @@ elif menu == "📚 ملفات ومصادر المحاضرات":
     else:
         st.info("لا توجد ملفات محاضرات مضافة بعد.")
 
-# 3. قسم الـ Assignments (الأسامينتس) - مدمج وموفر للمساحة
+# 3. قسم الـ Assignments (الأسامينتس)
 elif menu == "📋 Assignments (الأسامينتس)":
     st.title("📋 Assignments المتاحة والتكاليف")
     st.markdown("يمكنك الاطلاع على الـ Assignments، تحميل ملف الأسئلة، ورفع الحلول الخاصة بك بسهولة.")
@@ -239,16 +230,16 @@ elif menu == "📋 Assignments (الأسامينتس)":
     
     if os.path.exists("assignments.csv"):
         try:
-            df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", on_bad_lines="skip")
+            df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
             df_asg.columns = df_asg.columns.str.strip()
             
             submitted_asgs = []
             sub_db = "submissions.csv"
             if os.path.exists(sub_db):
-                df_subs_check = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
+                df_subs_check = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                 df_subs_check.columns = df_subs_check.columns.str.strip()
-                my_subs = df_subs_check[df_subs_check['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)]
-                submitted_asgs = my_subs['عنوان_الواجب'].astype(str).str.strip().tolist()
+                my_subs = df_subs_check[df_subs_check['اسم_المستخدم'].str.strip() == str(st.session_state.username)]
+                submitted_asgs = my_subs['عنوان_الواجب'].str.strip().tolist()
 
             if not df_asg.empty:
                 for index, row in df_asg.iterrows():
@@ -296,7 +287,7 @@ elif menu == "📋 Assignments (الأسامينتس)":
                                     sub_exists = os.path.exists(sub_db)
                                     sub_records = []
                                     if sub_exists:
-                                        df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", on_bad_lines="skip")
+                                        df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                                         df_s_old.columns = df_s_old.columns.str.strip()
                                         for _, r in df_s_old.iterrows():
                                             if not (str(r.get('اسم_المستخدم')).strip() == str(st.session_state.username) and str(r.get('عنوان_الواجب')).strip() == asg_title):
@@ -320,7 +311,7 @@ elif menu == "📋 Assignments (الأسامينتس)":
     else:
         st.info("لا توجد ملفات Assignments مسجلة حالياً.")
 
-# 4. قسم الملف الشخصي وتغيير البيانات وكلمة المرور
+# 4. قسم الملف الشخصي وتغيير البيانات وكلمة المرور (مؤمن بالكامل ضد LossySetitemError)
 elif menu == "⚙️ الملف الشخصي وتقييمي":
     st.title("⚙️ الملف الشخصي وتقييم الأداء")
     st.markdown("يمكنك هنا تعديل اسمك، تغيير كلمة المرور، رفع صورتك الشخصية، والاطلاع على تقييمك وتوجيهات المدرب.")
@@ -365,21 +356,30 @@ elif menu == "⚙️ الملف الشخصي وتقييمي":
                 
                 st.session_state.current_user = new_name_input.strip()
                 
+                # تحديث جدول المستخدمين بشكل آمن 100% ومنع أي LossySetitemError
                 if os.path.exists("users.csv"):
-                    df_u = pd.read_csv("users.csv", encoding="utf-8-sig", on_bad_lines="skip")
-                    mask = df_u['اسم_المستخدم'].astype(str).str.strip() == str(st.session_state.username)
+                    df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_u.columns = df_u.columns.str.strip()
                     
-                    df_u.loc[mask, 'اسم_المتدرب'] = new_name_input.strip()
-                    if new_password_input.strip():
-                        df_u.loc[mask, 'كلمة_المرور'] = new_password_input.strip()
+                    mask = df_u['اسم_المستخدم'].str.strip() == str(st.session_state.username).strip()
+                    
+                    if mask.any():
+                        # تحويل صريح لأنواع الأعمدة لنصوص قبل التعديل
+                        df_u['كلمة_المرور'] = df_u['كلمة_المرور'].astype(str)
+                        df_u['اسم_المتدرب'] = df_u['اسم_المتدرب'].astype(str)
                         
-                    df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
+                        df_u.loc[mask, 'اسم_المتدرب'] = str(new_name_input).strip()
+                        if new_password_input.strip():
+                            df_u.loc[mask, 'كلمة_المرور'] = str(new_password_input).strip()
+                            
+                        df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
                 
                 profiles_list = []
                 if os.path.exists(profile_db):
-                    df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", on_bad_lines="skip")
+                    df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_p_old.columns = df_p_old.columns.str.strip()
                     for _, r in df_p_old.iterrows():
-                        if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username):
+                        if str(r.get('اسم_المستخدم')).strip() != str(st.session_state.username).strip():
                             profiles_list.append([r.get('اسم_المستخدم'), r.get('الصورة_الشخصية'), r.get('التقييم'), r.get('نبذة')])
                 
                 profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
