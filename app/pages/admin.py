@@ -208,7 +208,6 @@ elif admin_menu == "📅 Attendance Tracking":
                 submit_att = st.form_submit_button("Save Attendance")
 
                 if submit_att:
-                    # Read existing records except for the selected date to overwrite/update
                     att_records = []
                     if os.path.exists(att_db):
                         df_old_att = pd.read_csv(att_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
@@ -217,7 +216,6 @@ elif admin_menu == "📅 Attendance Tracking":
                             if str(r.get('date')) != date_str:
                                 att_records.append([r.get('date'), r.get('username'), r.get('student_name'), r.get('status')])
 
-                    # Add new records for the selected date
                     for u_name, data in attendance_status.items():
                         att_records.append([date_str, u_name, data["student_name"], data["status"]])
 
@@ -243,7 +241,7 @@ elif admin_menu == "📅 Attendance Tracking":
     else:
         st.info("Users database not found.")
 
-# 3. Completed Training Section (الطلاب الذين أنهوا التدريب)
+# 3. Completed Training Section
 elif admin_menu == "🎓 Completed Training":
     st.title("🎓 Completed Training / Graduated Students")
     st.markdown("Manage and move students who have successfully finished their training program.")
@@ -277,7 +275,6 @@ elif admin_menu == "🎓 Completed Training":
                             s_track = selected_row.iloc[0].get('track')
                             comp_date = datetime.now().strftime("%Y-%m-%d")
 
-                            # Save to completed database
                             with open(completed_db, mode="a", encoding="utf-8-sig", newline="") as f_comp:
                                 w_comp = csv.writer(f_comp)
                                 w_comp.writerow([s_name, comp_username, s_track, comp_date, cert_notes])
