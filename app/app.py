@@ -36,14 +36,6 @@ st.markdown("""
 
 os.makedirs("uploads", exist_ok=True)
 
-# Database files
-users_db = "users.csv"
-profile_db = "profiles.csv"
-announcements_db = "announcements.csv"
-lectures_db = "lectures.csv"
-assignments_db = "assignments.csv"
-submissions_db = "submissions.csv"
-
 # Login System
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -69,9 +61,9 @@ if not st.session_state.logged_in:
             
             if submit_login:
                 if username and password:
-                    if os.path.exists(users_db):
+                    if os.path.exists("users.csv"):
                         try:
-                            df_users = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                            df_users = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                             df_users.columns = df_users.columns.str.strip()
                             
                             user_match = df_users[
@@ -101,6 +93,7 @@ if 'active_page' not in st.session_state:
     st.session_state.active_page = "📢 Announcements"
 
 # Profile database handling
+profile_db = "profiles.csv"
 if not os.path.exists(profile_db):
     with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
@@ -162,9 +155,9 @@ if menu == "📢 Announcements":
     st.markdown("Follow the latest news and important announcements for your training track.")
     st.divider()
     
-    if os.path.exists(announcements_db):
+    if os.path.exists("announcements.csv"):
         try:
-            df_an = pd.read_csv(announcements_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_an = pd.read_csv("announcements.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
             df_an.columns = df_an.columns.str.strip()
             if not df_an.empty:
                 for index, row in df_an.iterrows():
@@ -186,9 +179,9 @@ elif menu == "📚 Lecture Files":
     st.markdown("Download explanation files and learning materials for your lectures.")
     st.divider()
     
-    if os.path.exists(lectures_db):
+    if os.path.exists("lectures.csv"):
         try:
-            df_lec = pd.read_csv(lectures_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_lec = pd.read_csv("lectures.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
             df_lec.columns = df_lec.columns.str.strip()
             if not df_lec.empty:
                 for index, row in df_lec.iterrows():
@@ -216,14 +209,15 @@ elif menu == "📋 Assignments":
     st.markdown("You can view assignments, download question files, and upload your solutions easily.")
     st.divider()
     
-    if os.path.exists(assignments_db):
+    if os.path.exists("assignments.csv"):
         try:
-            df_asg = pd.read_csv(assignments_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
             df_asg.columns = df_asg.columns.str.strip()
             
             submitted_asgs = []
-            if os.path.exists(submissions_db):
-                df_subs_check = pd.read_csv(submissions_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            sub_db = "submissions.csv"
+            if os.path.exists(sub_db):
+                df_subs_check = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                 df_subs_check.columns = df_subs_check.columns.str.strip()
                 my_subs = df_subs_check[df_subs_check['username'].str.strip() == str(st.session_state.username)]
                 submitted_asgs = my_subs['assignment_title'].str.strip().tolist()
@@ -271,10 +265,10 @@ elif menu == "📋 Assignments":
                                     with open(ans_path_str, "wb") as sf:
                                         sf.write(uploaded_ans.getbuffer())
                                     
-                                    sub_exists = os.path.exists(submissions_db)
+                                    sub_exists = os.path.exists(sub_db)
                                     sub_records = []
                                     if sub_exists:
-                                        df_s_old = pd.read_csv(submissions_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                                        df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                                         df_s_old.columns = df_s_old.columns.str.strip()
                                         for _, r in df_s_old.iterrows():
                                             if not (str(r.get('username')).strip() == str(st.session_state.username) and str(r.get('assignment_title')).strip() == asg_title):
@@ -282,7 +276,7 @@ elif menu == "📋 Assignments":
                                     
                                     sub_records.append([st.session_state.current_user, st.session_state.username, asg_title, ans_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
 
-                                    with open(submissions_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
+                                    with open(sub_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
                                         w = csv.writer(sf_csv)
                                         w.writerow(["student_name", "username", "assignment_title", "solution_file", "date"])
                                         w.writerows(sub_records)
@@ -327,7 +321,7 @@ elif menu == "⚙️ Profile Settings":
     with col_p2:
         st.subheader("✏️ Edit Username & Password")
         
-        with st.form("update_profile_form", clear_on_submit=True):
+        with st.form("update_profile_form", clear_now_submit=True if 'clear_on_submit' in globals() else True):
             new_name_input = st.text_input("New Username:")
             new_password_input = st.text_input("New Password (leave blank if unchanged):", type="password")
             new_avatar_file = st.file_uploader("Choose a new profile picture (JPG/PNG):", type=["jpg", "jpeg", "png"])
@@ -346,9 +340,8 @@ elif menu == "⚙️ Profile Settings":
                     old_username = str(st.session_state.username).strip()
                     new_username = str(new_name_input).strip() if new_name_input.strip() else old_username
                     
-                    # Update users.csv so both username and student name update together and reflect in Admin panel
-                    if os.path.exists(users_db):
-                        df_u = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    if os.path.exists("users.csv"):
+                        df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                         df_u.columns = df_u.columns.str.strip()
                         
                         mask = df_u['username'].str.strip() == old_username
@@ -367,9 +360,8 @@ elif menu == "⚙️ Profile Settings":
                             if new_password_input.strip():
                                 df_u.loc[mask, 'password'] = str(new_password_input).strip()
                                 
-                            df_u.to_csv(users_db, index=False, encoding="utf-8-sig")
+                            df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
                     
-                    # Update profiles.csv linked to the new username
                     profiles_list = []
                     if os.path.exists(profile_db):
                         df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
