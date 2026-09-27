@@ -204,7 +204,7 @@ if admin_menu == "👥 Manage Students":
             else:
                 st.info("No student accounts registered yet.")
 
-# 2. Attendance Tracking Section
+# 2. Attendance Tracking Section (With Delete Option)
 elif admin_menu == "📅 Attendance Tracking":
     st.title("📅 Student Attendance Tracking")
     st.markdown("Record daily attendance linked precisely with lecture titles.")
@@ -275,6 +275,22 @@ elif admin_menu == "📅 Attendance Tracking":
                 df_all_att.columns = df_all_att.columns.str.strip()
                 if not df_all_att.empty:
                     st.dataframe(df_all_att, use_container_width=True, hide_index=True)
+                    
+                    st.markdown("---")
+                    st.subheader("🗑️ Delete Attendance Session")
+                    # تكوين قائمة مميزة لكل جلسة (تاريخ + اسم المحاضرة) للحذف السهل
+                    df_all_att['session_key'] = df_all_att['date'] + " | " + df_all_att['lecture_title']
+                    session_options = df_all_att['session_key'].unique().tolist()
+                    
+                    selected_session_to_delete = st.selectbox("Select Session to Delete:", options=session_options, key="del_att_session")
+                    if st.button("Delete Selected Session Attendance"):
+                        # الاحتفاظ فقط بالصفوف التي لا تنتمي لتلك الجلسة المحددة
+                        df_remaining = df_all_att[df_all_att['session_key'] != selected_session_to_delete]
+                        # إسقاط عمود المؤقت وإعادة الحفظ
+                        df_remaining = df_remaining.drop(columns=['session_key'])
+                        df_remaining.to_csv(att_db, index=False, encoding="utf-8-sig")
+                        st.success(f"Attendance session ({selected_session_to_delete}) deleted successfully!")
+                        st.rerun()
                 else:
                     st.info("No historical attendance data recorded.")
         else:
@@ -527,10 +543,10 @@ elif admin_menu == "⭐ Student Evaluation & Notes":
                     current_stu_notes = val_n
 
             with st.form("eval_form"):
-                eval_options = ["Excellent", "Very Good", "Good", "Needs Improvement"]
-                default_idx = eval_options.index(current_stu_eval) if current_stu_eval in eval_options else 0
+                eval_options = ["Evaluation", "Very Good", "Good", "Needs Improvement"]
+                default_idx = 0
                 
-                new_eval = st.selectbox("Academic Evaluation Status:", options=eval_options, index=default_idx)
+                new_eval = st.selectbox("Academic Evaluation Status:", options=["Excellent", "Very Good", "Good", "Needs Improvement"], index=0)
                 new_notes = st.text_area("Corrective Notes / Instructor Feedback:", value=current_stu_notes)
                 
                 submit_eval = st.form_submit_button("Save Evaluation")
