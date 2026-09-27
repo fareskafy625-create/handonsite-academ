@@ -5,31 +5,30 @@ import csv
 from datetime import datetime
 
 # Page Configuration
-st.set_page_config(page_title="Student Portal - HandsOnSite Academy", page_icon="💻", layout="wide")
+st.set_page_config(page_title="Admin Panel - HandsOnSite Academy", page_icon="⚙️", layout="wide")
 
 # Custom CSS Styling
 st.markdown("""
     <style>
-    .main { background-color: #f4f6f9; }
-    
+    .main { background-color: #f8f9fa; }
     div.stButton > button {
         width: 100%;
-        border-radius: 10px;
+        border-radius: 8px;
         font-weight: bold;
-        height: 48px;
+        height: 45px;
         background-color: #ffffff;
-        color: #0d6efd;
-        border: 2px solid #0d6efd;
+        color: #dc3545;
+        border: 2px solid #dc3545;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         transition: all 0.3s ease;
         margin-bottom: 8px;
         text-align: left;
-        padding-left: 20px;
+        padding-left: 15px;
     }
     div.stButton > button:hover { 
-        background-color: #0d6efd; 
+        background-color: #dc3545; 
         color: white; 
-        border-color: #0d6efd;
+        border-color: #dc3545;
         transform: translateY(-2px);
     }
     </style>
@@ -37,350 +36,351 @@ st.markdown("""
 
 os.makedirs("uploads", exist_ok=True)
 
-# Login System
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
+# Admin Login System
+if 'admin_logged_in' not in st.session_state:
+    st.session_state.admin_logged_in = False
 
-if not st.session_state.logged_in:
+if not st.session_state.admin_logged_in:
     st.markdown("<br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
         st.markdown("""
             <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #0d6efd; margin-bottom: 5px;">💻 HandsOnSite Academy</h2>
-                <p style="color: #6c757d; font-size: 15px;">Student Portal Login</p>
+                <h2 style="color: #dc3545; margin-bottom: 5px;">🛡️ HandsOnSite Academy</h2>
+                <p style="color: #6c757d; font-size: 15px;">Admin Dashboard Login</p>
             </div>
         """, unsafe_allow_html=True)
         
-        with st.form("login_form"):
-            st.markdown("🔒 **Please enter your account credentials**")
-            username = st.text_input("Username:")
-            password = st.text_input("Password:", type="password")
+        with st.form("admin_login_form"):
+            st.markdown("🔒 **Please enter admin credentials**")
+            admin_user = st.text_input("Admin Username:")
+            admin_pass = st.text_input("Password:", type="password")
             
-            submit_login = st.form_submit_button("Login")
+            submit_admin_login = st.form_submit_button("Login to Dashboard")
             
-            if submit_login:
-                if username and password:
-                    if os.path.exists("users.csv"):
-                        try:
-                            df_users = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                            df_users.columns = df_users.columns.str.strip()
-                            
-                            user_match = df_users[
-                                (df_users['username'].str.strip() == username.strip()) & 
-                                (df_users['password'].str.strip() == password.strip())
-                            ]
-                            
-                            if not user_match.empty:
-                                st.session_state.logged_in = True
-                                st.session_state.username = username.strip()
-                                st.session_state.current_user = user_match.iloc[0]['student_name']
-                                st.session_state.user_track = user_match.iloc[0]['track']
-                                st.session_state.active_page = "📢 Announcements"
-                                st.success("Logged in successfully! Redirecting...")
-                                st.rerun()
-                            else:
-                                st.error("Error: Incorrect username or password.")
-                        except Exception as e:
-                            st.error(f"An error occurred while reading users file: {e}")
-                    else:
-                        st.error("No active accounts found in the system. Please contact the admin.")
+            if submit_admin_login:
+                # Default admin credentials (you can change them)
+                if admin_user == "admin" and admin_pass == "admin123":
+                    st.session_state.admin_logged_in = True
+                    st.success("Logged in successfully to Admin Panel!")
+                    st.rerun()
                 else:
-                    st.warning("Please enter both username and password.")
+                    st.error("Error: Incorrect admin username or password.")
     st.stop()
 
-if 'active_page' not in st.session_state:
-    st.session_state.active_page = "📢 Announcements"
+if 'admin_page' not in st.session_state:
+    st.session_state.admin_page = "👥 Manage Students"
 
-# Profile database handling
-profile_db = "profiles.csv"
-if not os.path.exists(profile_db):
-    with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["username", "avatar", "evaluation", "notes"])
-
-df_prof = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-df_prof.columns = df_prof.columns.str.strip()
-user_prof_row = df_prof[df_prof['username'].str.strip() == str(st.session_state.username)]
-
-current_avatar = ""
-current_eval = "Excellent"
-improvement_notes = "No corrective notes currently. Keep up the great work!"
-if not user_prof_row.empty:
-    current_avatar = str(user_prof_row.iloc[0].get('avatar', ''))
-    val_eval = str(user_prof_row.iloc[0].get('evaluation', ''))
-    if val_eval != "nan" and val_eval.strip() != "":
-        current_eval = val_eval
-    val_notes = str(user_prof_row.iloc[0].get('notes', ''))
-    if val_notes != "nan" and val_notes.strip() != "":
-        improvement_notes = val_notes
-
-# Sidebar Navigation
-if pd.notna(current_avatar) and os.path.exists(current_avatar):
-    st.sidebar.image(current_avatar, width=120)
-
-st.sidebar.markdown(f"### Welcome, {st.session_state.get('current_user', 'Student')} 👋")
-st.sidebar.markdown(f"**Training Track:** {st.session_state.get('user_track', 'General')}")
+# Sidebar Navigation for Admin
+st.sidebar.markdown("### 🛡️ Admin Dashboard")
 st.sidebar.divider()
+st.sidebar.markdown("### 🎛️ Control Panel:")
 
-st.sidebar.markdown("### 🎛️ Main Menu:")
-
-if st.sidebar.button("📢 Announcements"):
-    st.session_state.active_page = "📢 Announcements"
+if st.sidebar.button("👥 Manage Students"):
+    st.session_state.admin_page = "👥 Manage Students"
     st.rerun()
 
-if st.sidebar.button("📚 Lecture Files & Resources"):
-    st.session_state.active_page = "📚 Lecture Files & Resources"
+if st.sidebar.button("📢 Post Announcements"):
+    st.session_state.admin_page = "📢 Post Announcements"
     st.rerun()
 
-if st.sidebar.button("📋 Assignments"):
-    st.session_state.active_page = "📋 Assignments"
+if st.sidebar.button("📚 Upload Lectures"):
+    st.session_state.admin_page = "📚 Upload Lectures"
     st.rerun()
 
-if st.sidebar.button("⚙️ Profile & Evaluation"):
-    st.session_state.active_page = "⚙️ Profile & Evaluation"
+if st.sidebar.button("📋 Add Assignments"):
+    st.session_state.admin_page = "📋 Add Assignments"
+    st.rerun()
+
+if st.sidebar.button("📥 Student Submissions"):
+    st.session_state.admin_page = "📥 Student Submissions"
+    st.rerun()
+
+if st.sidebar.button("⭐ Student Evaluation & Notes"):
+    st.session_state.admin_page = "⭐ Student Evaluation & Notes"
     st.rerun()
 
 st.sidebar.divider()
 
 if st.sidebar.button("🚪 Logout"):
-    st.session_state.logged_in = False
+    st.session_state.admin_logged_in = False
     st.rerun()
 
-menu = st.session_state.active_page
+admin_menu = st.session_state.admin_page
 
-# 1. Announcements Section
-if menu == "📢 Announcements":
-    st.title("📢 HandsOnSite Academy Announcements")
-    st.markdown("Follow the latest news and important announcements for your training track.")
+# 1. Manage Students Section
+if admin_menu == "👥 Manage Students":
+    st.title("👥 Student Accounts Management")
+    st.markdown("Add new students, view existing student accounts, or delete accounts.")
     st.divider()
-    
-    if os.path.exists("announcements.csv"):
-        try:
-            df_an = pd.read_csv("announcements.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-            df_an.columns = df_an.columns.str.strip()
-            if not df_an.empty:
-                for index, row in df_an.iterrows():
-                    st.info(f"### 📌 {row.get('title', '')}\n\n{row.get('content', '')}\n\n*Published Date: {row.get('date', '')}*")
-                    img_path = row.get('image')
-                    if pd.notna(img_path) and isinstance(img_path, str) and os.path.exists(img_path):
-                        st.image(img_path, width=350)
-                    st.write("---")
-            else:
-                st.info("No announcements published yet.")
-        except Exception:
-            st.info("Updating announcements...")
-    else:
-        st.info("No announcements available.")
 
-# 2. Lectures Section
-elif menu == "📚 Lecture Files & Resources":
-    st.title("📚 Lecture Files & Resources")
-    st.markdown("Download explanation files and learning materials for your lectures.")
-    st.divider()
-    
-    if os.path.exists("lectures.csv"):
-        try:
-            df_lec = pd.read_csv("lectures.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-            df_lec.columns = df_lec.columns.str.strip()
-            if not df_lec.empty:
-                for index, row in df_lec.iterrows():
-                    st.write(f"- **Track:** {row.get('track')} | **Lecture:** {row.get('title')}")
-                    file_path = row.get('file_path')
-                    if pd.notna(file_path) and isinstance(file_path, str) and os.path.exists(file_path):
-                        with open(file_path, "rb") as f:
-                            st.download_button(
-                                label="📥 Download Lecture File",
-                                data=f,
-                                file_name=os.path.basename(file_path),
-                                key=f"lec_dl_{index}"
-                            )
-                    st.write("---")
-            else:
-                st.info("No lectures uploaded yet.")
-        except Exception:
-            st.info("No lectures available at the moment.")
-    else:
-        st.info("No lecture files added yet.")
+    users_db = "users.csv"
+    if not os.path.exists(users_db):
+        with open(users_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["student_name", "username", "password", "track"])
 
-# 3. Assignments Section
-elif menu == "📋 Assignments":
-    st.title("📋 Available Assignments & Tasks")
-    st.markdown("You can view assignments, download question files, and upload your solutions easily.")
-    st.divider()
-    
-    if os.path.exists("assignments.csv"):
-        try:
-            df_asg = pd.read_csv("assignments.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-            df_asg.columns = df_asg.columns.str.strip()
+    col_u1, col_u2 = st.columns([1, 1])
+
+    with col_u1:
+        st.subheader("➕ Add New Student")
+        with st.form("add_student_form"):
+            new_s_name = st.text_input("Student Full Name:")
+            new_s_user = st.text_input("Username:")
+            new_s_pass = st.text_input("Password:", type="password")
+            new_s_track = st.selectbox("Training Track:", ["Networking", "Cybersecurity", "Programming", "General"])
             
-            submitted_asgs = []
-            sub_db = "submissions.csv"
-            if os.path.exists(sub_db):
-                df_subs_check = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                df_subs_check.columns = df_subs_check.columns.str.strip()
-                my_subs = df_subs_check[df_subs_check['username'].str.strip() == str(st.session_state.username)]
-                submitted_asgs = my_subs['assignment_title'].str.strip().tolist()
+            submit_new_student = st.form_submit_button("Create Student Account")
+            
+            if submit_new_student:
+                if new_s_name and new_s_user and new_s_pass:
+                    df_u = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_u.columns = df_u.columns.str.strip()
+                    
+                    if not df_u.empty and (df_u['username'].str.strip() == new_s_user.strip()).any():
+                        st.error("Error: This username already exists. Please choose another one.")
+                    else:
+                        with open(users_db, mode="a", encoding="utf-8-sig", newline="") as f_app:
+                            w_app = csv.writer(f_app)
+                            w_app.writerow([new_s_name.strip(), new_s_user.strip(), new_s_pass.strip(), new_s_track])
+                        st.success(f"Student account ({new_s_user}) created successfully!")
+                        st.rerun()
+                else:
+                    st.warning("Please fill in all required fields.")
 
-            if not df_asg.empty:
-                for index, row in df_asg.iterrows():
-                    asg_title = str(row.get('title', '')).strip()
-                    asg_date = row.get('date', '')
-                    asg_deadline = row.get('deadline', 'Not specified')
-                    asg_file = row.get('questions_file')
-
-                    is_submitted = asg_title in submitted_asgs
-
-                    with st.expander(f"📌 Assignment: {asg_title} {' | (✔️ Submitted)' if is_submitted else ' | (⚠️ Pending Submission)'}"):
-                        
-                        col_info1, col_info2 = st.columns([2, 1])
-                        with col_info1:
-                            st.markdown(f"**⏰ Deadline:** <span style='color: #dc3545;'>{asg_deadline}</span>", unsafe_allow_html=True)
-                            st.caption(f"Published Date: {asg_date}")
-                        with col_info2:
-                            if is_submitted:
-                                st.success("✔️ Submitted")
-                            else:
-                                st.warning("⚠️ Not Submitted Yet")
-
-                        st.markdown("---")
-
-                        if pd.notna(asg_file) and isinstance(asg_file, str) and os.path.exists(asg_file):
-                            with open(asg_file, "rb") as af:
-                                st.download_button(
-                                    label="📥 Download Assignment Questions (PDF)",
-                                    data=af,
-                                    file_name=os.path.basename(asg_file),
-                                    key=f"dl_asg_{index}"
-                                )
-                        
-                        with st.form(f"submit_form_{index}"):
-                            uploaded_ans = st.file_uploader("📤 Upload Assignment Solution File:", type=["pdf", "png", "jpg", "zip", "rar", "pkt", "txt"], key=f"ans_{index}")
-                            submit_ans = st.form_submit_button("Submit Solution to Admin")
-                            
-                            if submit_ans:
-                                if uploaded_ans is not None:
-                                    ans_filename = f"sub_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_ans.name}"
-                                    ans_path_str = os.path.join("uploads", ans_filename)
-                                    with open(ans_path_str, "wb") as sf:
-                                        sf.write(uploaded_ans.getbuffer())
-                                    
-                                    sub_exists = os.path.exists(sub_db)
-                                    sub_records = []
-                                    if sub_exists:
-                                        df_s_old = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                                        df_s_old.columns = df_s_old.columns.str.strip()
-                                        for _, r in df_s_old.iterrows():
-                                            if not (str(r.get('username')).strip() == str(st.session_state.username) and str(r.get('assignment_title')).strip() == asg_title):
-                                                sub_records.append([r.get('student_name'), r.get('username'), r.get('assignment_title'), r.get('solution_file'), r.get('date')])
-                                    
-                                    sub_records.append([st.session_state.current_user, st.session_state.username, asg_title, ans_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
-
-                                    with open(sub_db, mode="w", encoding="utf-8-sig", newline="") as sf_csv:
-                                        w = csv.writer(sf_csv)
-                                        w.writerow(["student_name", "username", "assignment_title", "solution_file", "date"])
-                                        w.writerows(sub_records)
-                                    
-                                    st.success("🎉 Assignment solution uploaded and recorded successfully!")
-                                    st.rerun()
-                                else:
-                                    st.warning("Please select a solution file before clicking submit.")
+    with col_u2:
+        st.subheader("📋 Registered Students List")
+        if os.path.exists(users_db):
+            df_u_show = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_u_show.columns = df_u_show.columns.str.strip()
+            if not df_u_show.empty:
+                st.dataframe(df_u_show[['student_name', 'username', 'track']], use_container_width=True)
+                
+                st.markdown("---")
+                st.subheader("🗑️ Delete Student Account")
+                del_username = st.selectbox("Select username to delete:", options=df_u_show['username'].tolist())
+                if st.button("Delete Selected Account"):
+                    df_filtered = df_u_show[df_u_show['username'].str.strip() != del_username.strip()]
+                    df_filtered.to_csv(users_db, index=False, encoding="utf-8-sig")
+                    st.success(f"Account ({del_username}) deleted successfully!")
+                    st.rerun()
             else:
-                st.info("No assignments published yet by the admin.")
-        except Exception as e:
-            st.error(f"An error occurred while reading assignments: {e}")
-    else:
-        st.info("No assignments recorded currently.")
+                st.info("No student accounts registered yet.")
 
-# 4. Profile & Settings Section
-elif menu == "⚙️ Profile & Evaluation":
-    st.title("⚙️ Profile & Performance Evaluation")
-    st.markdown("Here you can update your username, change your password, upload your profile picture, and view your evaluation and instructor notes.")
+# 2. Announcements Section
+elif admin_menu == "📢 Post Announcements":
+    st.title("📢 Post Academy Announcements")
+    st.markdown("Publish important news and announcements for students.")
     st.divider()
-    
-    col_p1, col_p2 = st.columns([1, 2])
-    
-    with col_p1:
-        st.subheader("🖼️ Profile Picture")
-        if pd.notna(current_avatar) and os.path.exists(current_avatar):
-            st.image(current_avatar, width=180, caption="Current Picture")
+
+    ann_db = "announcements.csv"
+    if not os.path.exists(ann_db):
+        with open(ann_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["title", "content", "date", "image"])
+
+    with st.form("announcement_form"):
+        ann_title = st.text_input("Announcement Title:")
+        ann_content = st.text_area("Announcement Details / Content:")
+        ann_image = st.file_uploader("Attach Image (Optional):", type=["jpg", "jpeg", "png"])
+        
+        submit_ann = st.form_submit_button("Publish Announcement")
+        
+        if submit_ann:
+            if ann_title and ann_content:
+                img_path_str = ""
+                if ann_image is not None:
+                    img_filename = f"ann_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{ann_image.name}"
+                    img_path_str = os.path.join("uploads", img_filename)
+                    with open(img_path_str, "wb") as img_f:
+                        img_f.write(ann_image.getbuffer())
+                
+                ann_records = []
+                if os.path.exists(ann_db):
+                    df_old_ann = pd.read_csv(ann_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_old_ann.columns = df_old_ann.columns.str.strip()
+                    for _, r in df_old_ann.iterrows():
+                        ann_records.append([r.get('title'), r.get('content'), r.get('date'), r.get('image')])
+                
+                ann_records.insert(0, [ann_title, ann_content, datetime.now().strftime("%Y-%m-%d %H:%M"), img_path_str])
+
+                with open(ann_db, mode="w", encoding="utf-8-sig", newline="") as f_ann:
+                    w_ann = csv.writer(f_ann)
+                    w_ann.writerow(["title", "content", "date", "image"])
+                    w_ann.writerows(ann_records)
+                
+                st.success("📢 Announcement published successfully!")
+                st.rerun()
+            else:
+                st.warning("Please enter both the announcement title and content.")
+
+# 3. Lectures Section
+elif admin_menu == "📚 Upload Lectures":
+    st.title("📚 Upload Lecture Files")
+    st.markdown("Upload lecture files and resources for students to download.")
+    st.divider()
+
+    lec_db = "lectures.csv"
+    if not os.path.exists(lec_db):
+        with open(lec_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["track", "title", "file_path", "date"])
+
+    with st.form("lecture_form"):
+        lec_track = st.selectbox("Target Training Track:", ["Networking", "Cybersecurity", "Programming", "General"])
+        lec_title = st.text_input("Lecture Title / Subject:")
+        lec_file = st.file_uploader("Upload Lecture File (PDF, PPTX, ZIP, etc.):", type=["pdf", "pptx", "docx", "zip", "rar", "txt"])
+        
+        submit_lec = st.form_submit_button("Upload Lecture")
+        
+        if submit_lec:
+            if lec_title and lec_file is not None:
+                lec_filename = f"lec_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{lec_file.name}"
+                lec_path_str = os.path.join("uploads", lec_filename)
+                with open(lec_path_str, "wb") as lf:
+                    lf.write(lec_file.getbuffer())
+                
+                with open(lec_db, mode="a", encoding="utf-8-sig", newline="") as f_lec:
+                    w_lec = csv.writer(f_lec)
+                    w_lec.writerow([lec_track, lec_title, lec_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                
+                st.success("📚 Lecture file uploaded successfully!")
+                st.rerun()
+            else:
+                st.warning("Please enter the lecture title and select a file to upload.")
+
+# 4. Assignments Section
+elif admin_menu == "📋 Add Assignments":
+    st.title("📋 Create & Add Assignments")
+    st.markdown("Publish new assignments and tasks for students.")
+    st.divider()
+
+    asg_db = "assignments.csv"
+    if not os.path.exists(asg_db):
+        with open(asg_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["title", "deadline", "questions_file", "date"])
+
+    with st.form("assignment_form"):
+        asg_title = st.text_input("Assignment Title:")
+        asg_deadline = st.text_input("Deadline (e.g., 2026-04-10 or Next Thursday):")
+        asg_file = st.file_uploader("Upload Assignment Questions File (PDF):", type=["pdf", "docx", "txt", "zip"])
+        
+        submit_asg = st.form_submit_button("Publish Assignment")
+        
+        if submit_asg:
+            if asg_title and asg_file is not None:
+                asg_filename = f"asg_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{asg_file.name}"
+                asg_path_str = os.path.join("uploads", asg_filename)
+                with open(asg_path_str, "wb") as af:
+                    af.write(asg_file.getbuffer())
+                
+                with open(asg_db, mode="a", encoding="utf-8-sig", newline="") as f_asg:
+                    w_asg = csv.writer(f_asg)
+                    w_asg.writerow([asg_title, asg_deadline, asg_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                
+                st.success("📋 Assignment published successfully!")
+                st.rerun()
+            else:
+                st.warning("Please enter the assignment title and upload the questions file.")
+
+# 5. Student Submissions Section
+elif admin_menu == "📥 Student Submissions":
+    st.title("📥 Review Student Submissions")
+    st.markdown("Review and download solutions submitted by students.")
+    st.divider()
+
+    sub_db = "submissions.csv"
+    if os.path.exists(sub_db):
+        df_subs = pd.read_csv(sub_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+        df_subs.columns = df_subs.columns.str.strip()
+        if not df_subs.empty:
+            for index, row in df_subs.iterrows():
+                st.write(f"### 👤 Student: {row.get('student_name')} ({row.get('username')})")
+                st.write(f"**Assignment:** {row.get('assignment_title')} | **Submission Date:** {row.get('date')}")
+                
+                sol_file = row.get('solution_file')
+                if pd.notna(sol_file) and isinstance(sol_file, str) and os.path.exists(sol_file):
+                    with open(sol_file, "rb") as sf:
+                        st.download_button(
+                            label=f"📥 Download Solution ({os.path.basename(sol_file)})",
+                            data=sf,
+                            file_name=os.path.basename(sol_file),
+                            key=f"dl_sub_{index}"
+                        )
+                st.write("---")
         else:
-            st.info("You haven't uploaded a profile picture yet.")
-            
-        st.markdown("---")
-        st.subheader("⭐ Academic Evaluation")
-        st.metric(label="Overall Evaluation Status", value=current_eval)
-        
-        st.markdown(f"""
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 15px;">
-                <h4 style="color: #856404; margin-top: 0; font-size: 15px;">📌 Instructor Notes & Guidelines:</h4>
-                <p style="color: #533f03; font-size: 14px; line-height: 1.5; margin-bottom: 0;">{improvement_notes}</p>
-            </div>
-        """, unsafe_allow_html=True)
+            st.info("No submissions received from students yet.")
+    else:
+        st.info("No submissions database found.")
 
-    with col_p2:
-        st.subheader("✏️ Edit Username & Password")
+# 6. Student Evaluation & Notes Section
+elif admin_menu == "⭐ Student Evaluation & Notes":
+    st.title("⭐ Student Evaluation & Instructor Notes")
+    st.markdown("Update academic evaluation and write corrective notes for students.")
+    st.divider()
+
+    users_db = "users.csv"
+    if os.path.exists(users_db):
+        df_u_eval = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+        df_u_eval.columns = df_u_eval.columns.str.strip()
         
-        with st.form("update_profile_form", clear_on_submit=True):
-            new_name_input = st.text_input("New Username:")
-            new_password_input = st.text_input("New Password (leave blank if you don't want to change):", type="password")
-            new_avatar_file = st.file_uploader("Choose a new profile picture (JPG/PNG):", type=["jpg", "jpeg", "png"])
+        if not df_u_eval.empty:
+            selected_student_user = st.selectbox("Select Student:", options=df_u_eval['username'].tolist())
             
-            submit_update = st.form_submit_button("Save All Changes")
+            profile_db = "profiles.csv"
+            if not os.path.exists(profile_db):
+                with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f:
+                    w = csv.writer(f)
+                    w.writerow(["username", "avatar", "evaluation", "notes"])
+
+            df_p_eval = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_p_eval.columns = df_p_eval.columns.str.strip()
             
-            if submit_update:
-                if new_name_input.strip() or new_password_input.strip() or new_avatar_file is not None:
-                    saved_avatar_path = current_avatar
-                    if new_avatar_file is not None:
-                        avatar_filename = f"avatar_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{new_avatar_file.name}"
-                        saved_avatar_path = os.path.join("uploads", avatar_filename)
-                        with open(saved_avatar_path, "wb") as av_f:
-                            av_f.write(new_avatar_file.getbuffer())
-                    
-                    old_username = str(st.session_state.username).strip()
-                    new_username = str(new_name_input).strip() if new_name_input.strip() else old_username
-                    
-                    # Update users.csv so both username and student name update together and reflect in Admin panel
-                    if os.path.exists("users.csv"):
-                        df_u = pd.read_csv("users.csv", encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
-                        df_u.columns = df_u.columns.str.strip()
-                        
-                        mask = df_u['username'].str.strip() == old_username
-                        
-                        if mask.any():
-                            df_u['password'] = df_u['password'].astype(str)
-                            df_u['student_name'] = df_u['student_name'].astype(str)
-                            df_u['username'] = df_u['username'].astype(str)
-                            
-                            if new_name_input.strip():
-                                df_u.loc[mask, 'username'] = new_username
-                                df_u.loc[mask, 'student_name'] = new_username
-                                st.session_state.username = new_username
-                                st.session_state.current_user = new_username
-                                
-                            if new_password_input.strip():
-                                df_u.loc[mask, 'password'] = str(new_password_input).strip()
-                                
-                            df_u.to_csv("users.csv", index=False, encoding="utf-8-sig")
-                    
-                    # Update profiles.csv linked to the new username
-                    profiles_list = []
+            student_prof_row = df_p_eval[df_p_eval['username'].str.strip() == str(selected_student_user)]
+            
+            current_stu_avatar = ""
+            current_stu_eval = "Excellent"
+            current_stu_notes = ""
+            
+            if not student_prof_row.empty:
+                current_stu_avatar = str(student_prof_row.iloc[0].get('avatar', ''))
+                val_e = str(student_prof_row.iloc[0].get('evaluation', ''))
+                if val_e != "nan" and val_e.strip() != "":
+                    current_stu_eval = val_e
+                val_n = str(student_prof_row.iloc[0].get('notes', ''))
+                if val_n != "nan":
+                    current_stu_notes = val_n
+
+            with st.form("eval_form"):
+                eval_options = ["Excellent", "Very Good", "Good", "Needs Improvement"]
+                default_idx = eval_options.index(current_stu_eval) if current_stu_eval in eval_options else 0
+                
+                new_eval = st.selectbox("Academic Evaluation Status:", options=eval_options, index=default_idx)
+                new_notes = st.text_area("Corrective Notes / Instructor Feedback:", value=current_stu_notes)
+                
+                submit_eval = st.form_submit_button("Save Student Evaluation")
+                
+                if submit_eval:
+                    profiles_records = []
                     if os.path.exists(profile_db):
                         df_p_old = pd.read_csv(profile_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
                         df_p_old.columns = df_p_old.columns.str.strip()
                         for _, r in df_p_old.iterrows():
-                            if str(r.get('username')).strip() != old_username:
-                                profiles_list.append([r.get('username'), r.get('avatar'), r.get('evaluation'), r.get('notes')])
+                            if str(r.get('username')).strip() != str(selected_student_user):
+                                profiles_records.append([r.get('username'), r.get('avatar'), r.get('evaluation'), r.get('notes')])
                     
-                    profiles_list.append([st.session_state.username, saved_avatar_path, current_eval, improvement_notes])
+                    profiles_records.append([str(selected_student_user), current_stu_avatar, new_eval, new_notes])
                     
                     with open(profile_db, mode="w", encoding="utf-8-sig", newline="") as f_p:
                         w_p = csv.writer(f_p)
                         w_p.writerow(["username", "avatar", "evaluation", "notes"])
-                        w_p.writerows(profiles_list)
+                        w_p.writerows(profiles_records)
                     
-                    st.success("✅ Username and details updated successfully! Updated in Admin panel too.")
+                    st.success(f"Evaluation and notes updated successfully for student ({selected_student_user})!")
                     st.rerun()
-                else:
-                    st.warning("⚠️ Please enter the data you wish to update first.")
+        else:
+            st.info("No students available to evaluate.")
+    else:
+        st.info("No student accounts registered yet.")
