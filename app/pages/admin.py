@@ -7,7 +7,7 @@ from datetime import datetime
 # Page Configuration
 st.set_page_config(page_title="Admin Dashboard - HandsOnSite Academy", page_icon="⚡", layout="wide")
 
-# Custom Modern & Sleek CSS Styling (Custom Animations & Polish)
+# Custom Modern & Sleek CSS Styling
 st.markdown("""
     <style>
     /* Global Background & Font */
@@ -47,15 +47,6 @@ st.markdown("""
         border-radius: 8px !important;
         border: 1px solid #d1d5db !important;
         background-color: #ffffff !important;
-    }
-    
-    /* Custom Cards Container Effect */
-    .css-1r6slb0, .element-container {
-        animation: fadeIn 0.4s ease-in-out;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(5px); }
-        to { opacity: 1; transform: translateY(0); }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -97,12 +88,11 @@ if not st.session_state.admin_logged_in:
 if 'admin_page' not in st.session_state:
     st.session_state.admin_page = "👥 Manage Students"
 
-# Sidebar Navigation for Admin (With Academy Logo Support)
-logo_path = "uploads/academy_logo.png"  # يمكنك رفع شعار الأكاديمية بهذا الاسم وسيعرض تلقائياً
+# Sidebar Navigation for Admin
+logo_path = "uploads/academy_logo.png"
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
 else:
-    # مكان لو حابب تظهر صورة افتراضية أو عنوان شيك في حال لم يتم رفع الشعار بعد
     st.sidebar.markdown("""
         <div style="text-align: center; padding: 10px 0;">
             <h2 style="color: #4f46e5; font-size: 20px; margin: 0;">⚡ HandsOnSite</h2>
@@ -187,7 +177,7 @@ if admin_menu == "👥 Manage Students":
                         with open(users_db, mode="a", encoding="utf-8-sig", newline="") as f_app:
                             w_app = csv.writer(f_app)
                             w_app.writerow([new_s_name.strip(), new_s_user.strip(), new_s_pass.strip(), new_s_track])
-                        st.success(f"تم اضافته بنجاح! Student account ({new_s_user}) created successfully.")
+                        st.success(f"Successfully added! Student account ({new_s_user}) created.")
                 else:
                     st.warning("Please fill in all mandatory fields.")
 
@@ -210,7 +200,7 @@ if admin_menu == "👥 Manage Students":
             else:
                 st.info("No student accounts registered yet.")
 
-# 2. Attendance Tracking Section (With Search Bar & Delete Option)
+# 2. Attendance Tracking Section
 elif admin_menu == "📅 Attendance Tracking":
     st.title("📅 Student Attendance Tracking")
     st.markdown("Record daily attendance quickly and search past records.")
@@ -282,7 +272,6 @@ elif admin_menu == "📅 Attendance Tracking":
                 df_all_att.columns = df_all_att.columns.str.strip()
                 
                 if not df_all_att.empty:
-                    # 🔍 شريط البحث في السجلات
                     search_query = st.text_input("🔍 Search Attendance (by student name, username, lecture title, or date):", "")
                     
                     if search_query.strip():
@@ -431,7 +420,7 @@ elif admin_menu == "📚 Upload Lectures":
             w = csv.writer(f)
             w.writerow(["track", "title", "file_path", "date"])
 
-    with st.form("lecture_form"):
+    with st.form("lecture_form", clear_on_submit=True):
         lec_track = st.selectbox("Target Training Track:", ["Networking", "Cybersecurity", "Programming", "General"])
         lec_title = st.text_input("Lecture Subject / Title:")
         lec_file = st.file_uploader("Upload Lecture File:", type=["pdf", "pptx", "docx", "zip", "rar", "txt"])
@@ -449,10 +438,39 @@ elif admin_menu == "📚 Upload Lectures":
                     w_lec = csv.writer(f_lec)
                     w_lec.writerow([lec_track, lec_title, lec_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
                 
-                st.success("📚 Lecture file successfully uploaded!")
+                st.success("📚 تم رفع المحاضرة بنجاح!")
                 st.rerun()
             else:
                 st.warning("Please provide the lecture title and attach a file.")
+
+    # خيار حذف المحاضرات
+    st.markdown("---")
+    st.subheader("🗑️ Delete Existing Lectures")
+    if os.path.exists(lec_db):
+        df_lecs = pd.read_csv(lec_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+        df_lecs.columns = df_lecs.columns.str.strip()
+        if not df_lecs.empty:
+            df_lecs['display_label'] = df_lecs['track'] + " | " + df_lecs['title'] + " (" + df_lecs['date'] + ")"
+            lec_to_delete = st.selectbox("Select Lecture to Delete:", options=df_lecs['display_label'].tolist(), key="del_lec_sel")
+            
+            if st.button("Delete Selected Lecture"):
+                selected_row = df_lecs[df_lecs['display_label'] == lec_to_delete].iloc[0]
+                f_path = selected_row.get('file_path')
+                if pd.notna(f_path) and os.path.exists(f_path):
+                    try:
+                        os.remove(f_path)
+                    except:
+                        pass
+                
+                df_updated_lecs = df_lecs[df_lecs['display_label'] != lec_to_delete]
+                df_updated_lecs = df_updated_lecs.drop(columns=['display_label'])
+                df_updated_lecs.to_csv(lec_db, index=False, encoding="utf-8-sig")
+                st.success("🗑️ تم حذف المحاضرة بنجاح!")
+                st.rerun()
+        else:
+            st.info("No lectures uploaded yet.")
+    else:
+        st.info("No lectures database found.")
 
 # 6. Assignments Section
 elif admin_menu == "📋 Add Assignments":
@@ -466,7 +484,7 @@ elif admin_menu == "📋 Add Assignments":
             w = csv.writer(f)
             w.writerow(["title", "deadline", "questions_file", "date"])
 
-    with st.form("assignment_form"):
+    with st.form("assignment_form", clear_on_submit=True):
         asg_title = st.text_input("Assignment Title:")
         asg_deadline = st.text_input("Deadline (e.g., 2026-04-15):")
         asg_file = st.file_uploader("Upload Assignment Questions (PDF):", type=["pdf", "docx", "txt", "zip"])
@@ -484,10 +502,39 @@ elif admin_menu == "📋 Add Assignments":
                     w_asg = csv.writer(f_asg)
                     w_asg.writerow([asg_title, asg_deadline, asg_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
                 
-                st.success("📋 Assignment published successfully!")
+                st.success("📋 تم رفع الاساينمنت بنجاح!")
                 st.rerun()
             else:
                 st.warning("Please enter the title and attach the questions file.")
+
+    # خيار حذف الواجبات (الاساينمنتات)
+    st.markdown("---")
+    st.subheader("🗑️ Delete Existing Assignments")
+    if os.path.exists(asg_db):
+        df_asgs = pd.read_csv(asg_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+        df_asgs.columns = df_asgs.columns.str.strip()
+        if not df_asgs.empty:
+            df_asgs['display_label'] = df_asgs['title'] + " (Deadline: " + df_asgs['deadline'] + ")"
+            asg_to_delete = st.selectbox("Select Assignment to Delete:", options=df_asgs['display_label'].tolist(), key="del_asg_sel")
+            
+            if st.button("Delete Selected Assignment"):
+                selected_row = df_asgs[df_asgs['display_label'] == asg_to_delete].iloc[0]
+                f_path = selected_row.get('questions_file')
+                if pd.notna(f_path) and os.path.exists(f_path):
+                    try:
+                        os.remove(f_path)
+                    except:
+                        pass
+                
+                df_updated_asgs = df_asgs[df_asgs['display_label'] != asg_to_delete]
+                df_updated_asgs = df_updated_asgs.drop(columns=['display_label'])
+                df_updated_asgs.to_csv(asg_db, index=False, encoding="utf-8-sig")
+                st.success("🗑️ تم حذف الاساينمنت بنجاح!")
+                st.rerun()
+        else:
+            st.info("No assignments uploaded yet.")
+    else:
+        st.info("No assignments database found.")
 
 # 7. Student Submissions Section
 elif admin_menu == "📥 Student Submissions":
@@ -503,7 +550,7 @@ elif admin_menu == "📥 Student Submissions":
             for index, row in df_subs.iterrows():
                 st.markdown(f"""
                     <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4f46e5; margin-bottom: 10px;">
-                        <h4 style="margin: 0; code: #111827;">👤 {row.get('student_name')} ({row.get('username')})</h4>
+                        <h4 style="margin: 0; color: #111827;">👤 {row.get('student_name')} ({row.get('username')})</h4>
                         <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;"><b>Assignment:</b> {row.get('assignment_title')} &nbsp;|&nbsp; <b>Submitted:</b> {row.get('date')}</p>
                     </div>
                 """, unsafe_allow_html=True)
@@ -555,7 +602,7 @@ elif admin_menu == "⭐ Student Evaluation & Notes":
             if not student_prof_row.empty:
                 current_stu_avatar = str(student_prof_row.iloc[0].get('avatar', ''))
                 val_e = str(student_prof_row.iloc[0].get('evaluation', ''))
-                if val_e != "nan" and val_e.str.strip() != "":
+                if val_e != "nan" and val_e.strip() != "":
                     current_stu_eval = val_e
                 val_n = str(student_prof_row.iloc[0].get('notes', ''))
                 if val_n != "nan":
