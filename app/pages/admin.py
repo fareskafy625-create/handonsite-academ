@@ -434,27 +434,40 @@ elif admin_menu == "📚 Upload Lectures":
                 with open(lec_path_str, "wb") as lf:
                     lf.write(lec_file.getbuffer())
                 
-                with open(lec_db, mode="a", encoding="utf-8-sig", newline="") as f_lec:
+                # قراءة الملف القديم وإضافة المحاضرة الجديدة بدقة
+                lec_records = []
+                if os.path.exists(lec_db):
+                    df_old_lecs = pd.read_csv(lec_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_old_lecs.columns = df_old_lecs.columns.str.strip()
+                    for _, r in df_old_lecs.iterrows():
+                        lec_records.append([r.get('track'), r.get('title'), r.get('file_path'), r.get('date')])
+                
+                lec_records.append([lec_track, lec_title, lec_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+
+                with open(lec_db, mode="w", encoding="utf-8-sig", newline="") as f_lec:
                     w_lec = csv.writer(f_lec)
-                    w_lec.writerow([lec_track, lec_title, lec_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                    w_lec.writerow(["track", "title", "file_path", "date"])
+                    w_lec.writerows(lec_records)
                 
                 st.success("📚 تم رفع المحاضرة بنجاح!")
                 st.rerun()
             else:
                 st.warning("Please provide the lecture title and attach a file.")
 
-    # خيار حذف المحاضرات
+    # خيار حذف المحاضرات (بشكل فردي ومحدد)
     st.markdown("---")
-    st.subheader("🗑️ Delete Existing Lectures")
+    st.subheader("🗑️ Delete Specific Lecture")
     if os.path.exists(lec_db):
         df_lecs = pd.read_csv(lec_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
         df_lecs.columns = df_lecs.columns.str.strip()
         if not df_lecs.empty:
-            df_lecs['display_label'] = df_lecs['track'] + " | " + df_lecs['title'] + " (" + df_lecs['date'] + ")"
-            lec_to_delete = st.selectbox("Select Lecture to Delete:", options=df_lecs['display_label'].tolist(), key="del_lec_sel")
+            # إنشاء معرف فريد لكل صف لتفادي أي تداخل أو تكرار بالأسماء
+            df_lecs['unique_id'] = [f"Lecture #{i+1}: {row.get('track')} - {row.get('title')} ({row.get('date')})" for i, row in df_lecs.iterrows()]
             
-            if st.button("Delete Selected Lecture"):
-                selected_row = df_lecs[df_lecs['display_label'] == lec_to_delete].iloc[0]
+            lec_to_delete_label = st.selectbox("Select exact lecture to delete:", options=df_lecs['unique_id'].tolist(), key="del_lec_sel_unique")
+            
+            if st.button("Delete Selected Lecture Only"):
+                selected_row = df_lecs[df_lecs['unique_id'] == lec_to_delete_label].iloc[0]
                 f_path = selected_row.get('file_path')
                 if pd.notna(f_path) and os.path.exists(f_path):
                     try:
@@ -462,10 +475,11 @@ elif admin_menu == "📚 Upload Lectures":
                     except:
                         pass
                 
-                df_updated_lecs = df_lecs[df_lecs['display_label'] != lec_to_delete]
-                df_updated_lecs = df_updated_lecs.drop(columns=['display_label'])
+                # تصفية الجدول بحيث يتم الاحتفاظ بكل السطور عدا السطر المحدد تماماً
+                df_updated_lecs = df_lecs[df_lecs['unique_id'] != lec_to_delete_label]
+                df_updated_lecs = df_updated_lecs[['track', 'title', 'file_path', 'date']]
                 df_updated_lecs.to_csv(lec_db, index=False, encoding="utf-8-sig")
-                st.success("🗑️ تم حذف المحاضرة بنجاح!")
+                st.success("🗑️ تم حذف المحاضرة المحددة بنجاح!")
                 st.rerun()
         else:
             st.info("No lectures uploaded yet.")
@@ -498,27 +512,40 @@ elif admin_menu == "📋 Add Assignments":
                 with open(asg_path_str, "wb") as af:
                     af.write(asg_file.getbuffer())
                 
-                with open(asg_db, mode="a", encoding="utf-8-sig", newline="") as f_asg:
+                # قراءة الأسلاف وإضافة الواجب الجديد دون مسح القديم
+                asg_records = []
+                if os.path.exists(asg_db):
+                    df_old_asgs = pd.read_csv(asg_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                    df_old_asgs.columns = df_old_asgs.columns.str.strip()
+                    for _, r in df_old_asgs.iterrows():
+                        asg_records.append([r.get('title'), r.get('deadline'), r.get('questions_file'), r.get('date')])
+                
+                asg_records.append([asg_title, asg_deadline, asg_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+
+                with open(asg_db, mode="w", encoding="utf-8-sig", newline="") as f_asg:
                     w_asg = csv.writer(f_asg)
-                    w_asg.writerow([asg_title, asg_deadline, asg_path_str, datetime.now().strftime("%Y-%m-%d %H:%M")])
+                    w_asg.writerow(["title", "deadline", "questions_file", "date"])
+                    w_asg.writerows(asg_records)
                 
                 st.success("📋 تم رفع الاساينمنت بنجاح!")
                 st.rerun()
             else:
                 st.warning("Please enter the title and attach the questions file.")
 
-    # خيار حذف الواجبات (الاساينمنتات)
+    # خيار حذف الواجبات (تحديد فردي دقيق جداً لكل واجب)
     st.markdown("---")
-    st.subheader("🗑️ Delete Existing Assignments")
+    st.subheader("🗑️ Delete Specific Assignment")
     if os.path.exists(asg_db):
         df_asgs = pd.read_csv(asg_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
         df_asgs.columns = df_asgs.columns.str.strip()
         if not df_asgs.empty:
-            df_asgs['display_label'] = df_asgs['title'] + " (Deadline: " + df_asgs['deadline'] + ")"
-            asg_to_delete = st.selectbox("Select Assignment to Delete:", options=df_asgs['display_label'].tolist(), key="del_asg_sel")
+            # إنشاء معرف فريد لكل صف بناءً على رقمه واسمه وتاريخه لضمان عدم حدوث خطأ في مسح الخطأ
+            df_asgs['unique_id'] = [f"Assignment #{i+1}: {row.get('title')} (Deadline: {row.get('deadline')} - {row.get('date')})" for i, row in df_asgs.iterrows()]
             
-            if st.button("Delete Selected Assignment"):
-                selected_row = df_asgs[df_asgs['display_label'] == asg_to_delete].iloc[0]
+            asg_to_delete_label = st.selectbox("Select exact assignment to delete:", options=df_asgs['unique_id'].tolist(), key="del_asg_sel_unique")
+            
+            if st.button("Delete Selected Assignment Only"):
+                selected_row = df_asgs[df_asgs['unique_id'] == asg_to_delete_label].iloc[0]
                 f_path = selected_row.get('questions_file')
                 if pd.notna(f_path) and os.path.exists(f_path):
                     try:
@@ -526,10 +553,11 @@ elif admin_menu == "📋 Add Assignments":
                     except:
                         pass
                 
-                df_updated_asgs = df_asgs[df_asgs['display_label'] != asg_to_delete]
-                df_updated_asgs = df_updated_asgs.drop(columns=['display_label'])
+                # استبعاد الصف المحدد فقط وإبقاء الباقي سليماً تماماً
+                df_updated_asgs = df_asgs[df_asgs['unique_id'] != asg_to_delete_label]
+                df_updated_asgs = df_updated_asgs[['title', 'deadline', 'questions_file', 'date']]
                 df_updated_asgs.to_csv(asg_db, index=False, encoding="utf-8-sig")
-                st.success("🗑️ تم حذف الاساينمنت بنجاح!")
+                st.success("🗑️ تم حذف الاساينمنت المحدد بنجاح دون التأثير على الباقي!")
                 st.rerun()
         else:
             st.info("No assignments uploaded yet.")
