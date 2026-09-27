@@ -60,7 +60,6 @@ if not st.session_state.admin_logged_in:
             submit_admin_login = st.form_submit_button("Login to Dashboard")
             
             if submit_admin_login:
-                # Default admin credentials (you can change them)
                 if admin_user == "admin" and admin_pass == "admin123":
                     st.session_state.admin_logged_in = True
                     st.success("Logged in successfully to Admin Panel!")
@@ -79,6 +78,14 @@ st.sidebar.markdown("### 🎛️ Control Panel:")
 
 if st.sidebar.button("👥 Manage Students"):
     st.session_state.admin_page = "👥 Manage Students"
+    st.rerun()
+
+if st.sidebar.button("📅 Attendance Tracking"):
+    st.session_state.admin_page = "📅 Attendance Tracking"
+    st.rerun()
+
+if st.sidebar.button("🎓 Completed Training"):
+    st.session_state.admin_page = "🎓 Completed Training"
     st.rerun()
 
 if st.sidebar.button("📢 Post Announcements"):
@@ -159,7 +166,7 @@ if admin_menu == "👥 Manage Students":
                 
                 st.markdown("---")
                 st.subheader("🗑️ Delete Student Account")
-                del_username = st.selectbox("Select username to delete:", options=df_u_show['username'].tolist())
+                del_username = st.selectbox("Select username to delete:", options=df_u_show['username'].tolist(), key="del_stu_select")
                 if st.button("Delete Selected Account"):
                     df_filtered = df_u_show[df_u_show['username'].str.strip() != del_username.strip()]
                     df_filtered.to_csv(users_db, index=False, encoding="utf-8-sig")
@@ -168,7 +175,131 @@ if admin_menu == "👥 Manage Students":
             else:
                 st.info("No student accounts registered yet.")
 
-# 2. Announcements Section
+# 2. Attendance Tracking Section
+elif admin_menu == "📅 Attendance Tracking":
+    st.title("📅 Student Attendance Tracking")
+    st.markdown("Record and review daily student attendance.")
+    st.divider()
+
+    att_db = "attendance.csv"
+    if not os.path.exists(att_db):
+        with open(att_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["date", "username", "student_name", "status"])
+
+    users_db = "users.csv"
+    if os.path.exists(users_db):
+        df_u_att = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+        df_u_att.columns = df_u_att.columns.str.strip()
+
+        if not df_u_att.empty:
+            selected_date = st.date_input("Select Attendance Date:", value=datetime.now().date())
+            date_str = selected_date.strftime("%Y-%m-%d")
+
+            st.subheader(f"📝 Mark Attendance for: {date_str}")
+            with st.form("attendance_form"):
+                attendance_status = {}
+                for idx, row in df_u_att.iterrows():
+                    u_name = row.get('username')
+                    s_name = row.get('student_name')
+                    status = st.selectbox(f"{s_name} ({u_name})", ["Present", "Absent", "Late"], key=f"att_{u_name}")
+                    attendance_status[u_name] = {"student_name": s_name, "status": status}
+
+                submit_att = st.form_submit_button("Save Attendance")
+
+                if submit_att:
+                    # Read existing records except for the selected date to overwrite/update
+                    att_records = []
+                    if os.path.exists(att_db):
+                        df_old_att = pd.read_csv(att_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                        df_old_att.columns = df_old_att.columns.str.strip()
+                        for _, r in df_old_att.iterrows():
+                            if str(r.get('date')) != date_str:
+                                att_records.append([r.get('date'), r.get('username'), r.get('student_name'), r.get('status')])
+
+                    # Add new records for the selected date
+                    for u_name, data in attendance_status.items():
+                        att_records.append([date_str, u_name, data["student_name"], data["status"]])
+
+                    with open(att_db, mode="w", encoding="utf-8-sig", newline="") as f_att:
+                        w_att = csv.writer(f_att)
+                        w_att.writerow(["date", "username", "student_name", "status"])
+                        w_att.writerows(att_records)
+
+                    st.success(f"Attendance saved successfully for {date_str}!")
+                    st.rerun()
+
+            st.markdown("---")
+            st.subheader("📊 View Attendance Records")
+            if os.path.exists(att_db):
+                df_all_att = pd.read_csv(att_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+                df_all_att.columns = df_all_att.columns.str.strip()
+                if not df_all_att.empty:
+                    st.dataframe(df_all_att, use_container_width=True)
+                else:
+                    st.info("No attendance records found.")
+        else:
+            st.info("No students found in the database to record attendance.")
+    else:
+        st.info("Users database not found.")
+
+# 3. Completed Training Section (الطلاب الذين أنهوا التدريب)
+elif admin_menu == "🎓 Completed Training":
+    st.title("🎓 Completed Training / Graduated Students")
+    st.markdown("Manage and move students who have successfully finished their training program.")
+    st.divider()
+
+    completed_db = "completed_students.csv"
+    if not os.path.exists(completed_db):
+        with open(completed_db, mode="w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["student_name", "username", "track", "completion_date", "certificate_notes"])
+
+    users_db = "users.csv"
+    col_c1, col_c2 = st.columns([1, 1])
+
+    with col_c1:
+        st.subheader("🏅 Mark Student as Completed")
+        if os.path.exists(users_db):
+            df_u_comp = pd.read_csv(users_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_u_comp.columns = df_u_comp.columns.str.strip()
+
+            if not df_u_comp.empty:
+                with st.form("complete_student_form"):
+                    comp_username = st.selectbox("Select Student Username:", options=df_u_comp['username'].tolist(), key="comp_sel")
+                    cert_notes = st.text_area("Certificate / Final Performance Notes:")
+                    submit_comp = st.form_submit_button("Move to Completed Training")
+
+                    if submit_comp:
+                        selected_row = df_u_comp[df_u_comp['username'].str.strip() == str(comp_username).strip()]
+                        if not selected_row.empty:
+                            s_name = selected_row.iloc[0].get('student_name')
+                            s_track = selected_row.iloc[0].get('track')
+                            comp_date = datetime.now().strftime("%Y-%m-%d")
+
+                            # Save to completed database
+                            with open(completed_db, mode="a", encoding="utf-8-sig", newline="") as f_comp:
+                                w_comp = csv.writer(f_comp)
+                                w_comp.writerow([s_name, comp_username, s_track, comp_date, cert_notes])
+
+                            st.success(f"Student ({s_name}) successfully marked as completed training!")
+                            st.rerun()
+            else:
+                st.info("No registered students found.")
+        else:
+            st.info("Users database not found.")
+
+    with col_c2:
+        st.subheader("🎓 Graduated Students List")
+        if os.path.exists(completed_db):
+            df_comp_show = pd.read_csv(completed_db, encoding="utf-8-sig", dtype=str, on_bad_lines="skip")
+            df_comp_show.columns = df_comp_show.columns.str.strip()
+            if not df_comp_show.empty:
+                st.dataframe(df_comp_show[['student_name', 'username', 'track', 'completion_date']], use_container_width=True)
+            else:
+                st.info("No students have been marked as completed yet.")
+
+# 4. Announcements Section
 elif admin_menu == "📢 Post Announcements":
     st.title("📢 Post Academy Announcements")
     st.markdown("Publish important news and announcements for students.")
@@ -215,7 +346,7 @@ elif admin_menu == "📢 Post Announcements":
             else:
                 st.warning("Please enter both the announcement title and content.")
 
-# 3. Lectures Section
+# 5. Lectures Section
 elif admin_menu == "📚 Upload Lectures":
     st.title("📚 Upload Lecture Files")
     st.markdown("Upload lecture files and resources for students to download.")
@@ -250,7 +381,7 @@ elif admin_menu == "📚 Upload Lectures":
             else:
                 st.warning("Please enter the lecture title and select a file to upload.")
 
-# 4. Assignments Section
+# 6. Assignments Section
 elif admin_menu == "📋 Add Assignments":
     st.title("📋 Create & Add Assignments")
     st.markdown("Publish new assignments and tasks for students.")
@@ -285,7 +416,7 @@ elif admin_menu == "📋 Add Assignments":
             else:
                 st.warning("Please enter the assignment title and upload the questions file.")
 
-# 5. Student Submissions Section
+# 7. Student Submissions Section
 elif admin_menu == "📥 Student Submissions":
     st.title("📥 Review Student Submissions")
     st.markdown("Review and download solutions submitted by students.")
@@ -315,7 +446,7 @@ elif admin_menu == "📥 Student Submissions":
     else:
         st.info("No submissions database found.")
 
-# 6. Student Evaluation & Notes Section
+# 8. Student Evaluation & Notes Section
 elif admin_menu == "⭐ Student Evaluation & Notes":
     st.title("⭐ Student Evaluation & Instructor Notes")
     st.markdown("Update academic evaluation and write corrective notes for students.")
@@ -327,7 +458,7 @@ elif admin_menu == "⭐ Student Evaluation & Notes":
         df_u_eval.columns = df_u_eval.columns.str.strip()
         
         if not df_u_eval.empty:
-            selected_student_user = st.selectbox("Select Student:", options=df_u_eval['username'].tolist())
+            selected_student_user = st.selectbox("Select Student:", options=df_u_eval['username'].tolist(), key="eval_stu_select")
             
             profile_db = "profiles.csv"
             if not os.path.exists(profile_db):
