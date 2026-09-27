@@ -7,29 +7,49 @@ from datetime import datetime
 # Page Configuration
 st.set_page_config(page_title="Student Portal - HandsOnSite Academy", page_icon="💻", layout="wide")
 
-# Custom CSS Styling
+# Custom CSS Styling (UI Enhancements for a Professional Look)
 st.markdown("""
     <style>
-    .main { background-color: #f4f6f9; }
+    .main { background-color: #f8fafc; }
+    
+    /* Global Card styling */
+    .css-1r6slb0, .stApp {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Custom Buttons */
     div.stButton > button {
         width: 100%;
-        border-radius: 10px;
-        font-weight: bold;
-        height: 48px;
+        border-radius: 8px;
+        font-weight: 600;
+        height: 45px;
         background-color: #ffffff;
-        color: #0d6efd;
-        border: 2px solid #0d6efd;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-        margin-bottom: 8px;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
+        margin-bottom: 6px;
         text-align: left;
-        padding-left: 20px;
+        padding-left: 16px;
     }
     div.stButton > button:hover { 
-        background-color: #0d6efd; 
+        background-color: #0f172a; 
         color: white; 
-        border-color: #0d6efd;
-        transform: translateY(-2px);
+        border-color: #0f172a;
+        transform: translateY(-1px);
+    }
+    
+    /* Sidebar styling enhancements */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    /* Success / Info box styling */
+    .stSuccess {
+        background-color: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+        color: #166534 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -41,14 +61,14 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.3, 1])
     
     with col2:
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #0d6efd; margin-bottom: 5px;">💻 HandsOnSite Academy</h2>
-                <p style="color: #6c757d; font-size: 15px;">Student Portal Login</p>
+            <div style="background: white; padding: 35px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #0f172a; margin-bottom: 8px; font-weight: 700;">💻 HandsOnSite Academy</h2>
+                <p style="color: #64748b; font-size: 14px; margin: 0;">Student Portal Secure Login</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -57,7 +77,7 @@ if not st.session_state.logged_in:
             username = st.text_input("Username:")
             password = st.text_input("Password:", type="password")
             
-            submit_login = st.form_submit_button("Login")
+            submit_login = st.form_submit_button("Login to Portal")
             
             if submit_login:
                 if username and password:
@@ -117,13 +137,13 @@ if not user_prof_row.empty:
 
 # Sidebar Navigation
 if pd.notna(current_avatar) and os.path.exists(current_avatar):
-    st.sidebar.image(current_avatar, width=120)
+    st.sidebar.image(current_avatar, width=110)
 
 st.sidebar.markdown(f"### Welcome, {st.session_state.get('current_user', 'Student')} 👋")
-st.sidebar.markdown(f"**Training Track:** {st.session_state.get('user_track', 'General')}")
+st.sidebar.markdown(f"**Track:** <span style='color: #0d6efd;'>{st.session_state.get('user_track', 'General')}</span>", unsafe_allow_html=True)
 st.sidebar.divider()
 
-st.sidebar.markdown("### 🎛️ Main Menu:")
+st.sidebar.markdown("### 🎛️ Navigation Menu")
 
 if st.sidebar.button("📢 Announcements"):
     st.session_state.active_page = "📢 Announcements"
@@ -231,7 +251,7 @@ elif menu == "📋 Assignments":
 
                     is_submitted = asg_title in submitted_asgs
 
-                    with st.expander(f"📌 Assignment: {asg_title} {' | (✔️ Submitted)' : ' | (⚠️ Pending Submission)' if not is_submitted else ' | (✔️ Submitted)'}"):
+                    with st.expander(f"📌 Assignment: {asg_title} {' | (✔️ Submitted)' if is_submitted else ' | (⚠️ Pending Submission)'}"):
                         
                         col_info1, col_info2 = st.columns([2, 1])
                         with col_info1:
@@ -298,6 +318,11 @@ elif menu == "⚙️ Profile & Evaluation":
     st.markdown("Here you can update your username, password, profile picture, and view your evaluation and instructor guidance.")
     st.divider()
     
+    # Check if there's a stored success message to display
+    if 'profile_success_msg' in st.session_state:
+        st.success(st.session_state.profile_success_msg)
+        del st.session_state.profile_success_msg
+
     col_p1, col_p2 = st.columns([1, 2])
     
     with col_p1:
@@ -312,9 +337,9 @@ elif menu == "⚙️ Profile & Evaluation":
         st.metric(label="General Evaluation Status", value=current_eval)
         
         st.markdown(f"""
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 15px;">
-                <h4 style="color: #856404; margin-top: 0; font-size: 15px;">📌 Instructor Feedback & Notes:</h4>
-                <p style="color: #533f03; font-size: 14px; line-height: 1.5; margin-bottom: 0;">{improvement_notes}</p>
+            <div style="background-color: #fffbeb; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 15px;">
+                <h4 style="color: #b45309; margin-top: 0; font-size: 15px;">📌 Instructor Feedback & Notes:</h4>
+                <p style="color: #92400e; font-size: 14px; line-height: 1.5; margin-bottom: 0;">{improvement_notes}</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -379,7 +404,8 @@ elif menu == "⚙️ Profile & Evaluation":
                         w_p.writerow(["username", "avatar", "evaluation", "notes"])
                         w_p.writerows(profiles_list)
                     
-                    st.success("✅ Username and profile details updated successfully and synced with the admin dashboard!")
+                    # Set success message in session state and reload
+                    st.session_state.profile_success_msg = "Successfully updated!"
                     st.rerun()
                 else:
                     st.warning("⚠️ Please enter the data you want to modify first.")
